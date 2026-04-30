@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wardrobe</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#faf9f6;--bg2:#f2efe9;--bg3:#e8e3da;--bg4:#d8d2c6;
+  --text:#1a1705;--text2:#6b6550;--text3:#a39e8e;
+  --border:rgba(26,23,5,0.09);--border2:rgba(26,23,5,0.17);--border3:rgba(26,23,5,0.32);
+  --accent:#1a1705;--acc-fg:#faf9f6;
+  --radius:9px;--radius-lg:13px;
+  --shadow:0 2px 14px rgba(26,23,5,0.08);--shadow-lg:0 8px 36px rgba(26,23,5,0.17);
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg3);color:var(--text);font-size:14px;height:100vh;overflow:hidden;}
+input,select,textarea,button{font-family:'DM Sans',sans-serif;color:var(--text);}
+input,select,textarea{background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;outline:none;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(26,23,5,0.06);}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:99px;}
+.serif{font-family:'DM Serif Display',serif;}
+
+/* ── Layout ── */
+.app{display:flex;height:100vh;overflow:hidden;}
+.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border2);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;}
+.sidebar-head{padding:20px 16px 16px;}
+.sidebar-head h1{font-family:'DM Serif Display',serif;font-size:20px;letter-spacing:-.02em;}
+.sidebar-head p{font-size:11px;color:var(--text3);margin-top:3px;}
+.nav-section{padding:6px 8px 2px;}
+.nav-lbl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.09em;padding:8px 10px 4px;display:block;}
+.nav-btn{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius);cursor:pointer;color:var(--text2);font-size:13.5px;font-weight:500;border:none;background:none;width:100%;text-align:left;transition:all .12s;}
+.nav-btn:hover{background:var(--bg3);color:var(--text);}
+.nav-btn.active{background:var(--accent);color:var(--acc-fg);}
+.nav-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0;}
+.nav-badge{margin-left:auto;font-size:10px;background:var(--bg4);color:var(--text3);padding:1px 6px;border-radius:99px;flex-shrink:0;}
+.nav-btn.active .nav-badge{background:rgba(255,255,255,.18);color:rgba(255,255,255,.65);}
+.sidebar-foot{margin-top:auto;padding:10px 8px;border-top:1px solid var(--border);}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+/* ── Content header (inside content, not topbar) ── */
+.content-head{padding:24px 24px 0;}
+.content-head-title{font-family:'DM Serif Display',serif;font-size:26px;letter-spacing:-.02em;margin-bottom:3px;}
+.content-head-sub{font-size:12px;color:var(--text3);margin-bottom:18px;}
+/* ── Filter bar matching photo ── */
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:0 24px;margin-bottom:16px;}
+.filter-bar input[type=text]{height:34px;padding:0 12px 0 34px;border-radius:99px;font-size:13px;border:1px solid var(--border2);background:var(--bg);min-width:200px;flex:1;max-width:260px;}
+.filter-bar-search{position:relative;flex:1;max-width:260px;}
+.filter-bar-search input{width:100%;padding-left:34px;}
+.filter-bar-search::before{content:'🔍';position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:12px;pointer-events:none;}
+.fsel{height:34px;padding:0 28px 0 12px;border-radius:99px;font-size:12.5px;border:1px solid var(--border2);background:var(--bg);color:var(--text2);appearance:none;-webkit-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23a39e8e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;white-space:nowrap;}
+.fsel:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px rgba(26,23,5,0.06);}
+.view-toggle{display:flex;gap:2px;margin-left:auto;}
+.view-btn{width:32px;height:32px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg);color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .12s;}
+.view-btn:hover{background:var(--bg2);}
+.view-btn.active{background:var(--accent);color:var(--acc-fg);border-color:transparent;}
+.content{flex:1;overflow-y:auto;padding:0 24px 24px;}
+/* list view */
+.list-view .grid{grid-template-columns:1fr;}
+.list-view .card-pad{display:flex;align-items:center;gap:14px;padding:10px 14px;}
+.list-view .swatch{width:44px;height:44px;flex-shrink:0;margin:0;border-radius:8px;}
+.list-view .card-name{white-space:nowrap;}
+.list-view .card-right{flex:1;min-width:0;}
+.list-view .card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+
+/* ── Buttons ── */
+.btn{height:32px;padding:0 13px;border-radius:var(--radius);background:var(--bg);color:var(--text);border:1px solid var(--border2);font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .12s;white-space:nowrap;}
+.btn:hover{background:var(--bg2);}
+.btn.sm{height:28px;padding:0 10px;font-size:12px;}
+.btn.primary{background:var(--accent);color:var(--acc-fg);border-color:transparent;}
+.btn.primary:hover{opacity:.82;}
+.btn.danger{color:#a32d2d;border-color:#f7c1c1;}
+.btn.danger:hover{background:#fcebeb;}
+.btn.ghost{border-color:transparent;background:transparent;}
+.btn.ghost:hover{background:var(--bg2);}
+
+/* ── Filters ── */
+.filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
+.filters select{height:29px;padding:0 8px;font-size:12px;border-radius:8px;}
+
+/* ── Cards / Grid ── */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:11px;}
+.grid-lg{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:11px;}
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);cursor:pointer;transition:all .14s;}
+.card:hover{border-color:var(--border3);box-shadow:var(--shadow);transform:translateY(-1px);}
+.card-pad{padding:13px;}
+.swatch{width:100%;height:66px;border-radius:8px;margin-bottom:9px;display:flex;align-items:center;justify-content:center;font-size:26px;border:1px solid rgba(0,0,0,0.07);}
+.card-name{font-size:13px;font-weight:600;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.card-sub{font-size:11px;color:var(--text2);margin-bottom:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tags{display:flex;flex-wrap:wrap;gap:3px;}
+.tag{font-size:10px;padding:2px 7px;border-radius:99px;background:var(--bg2);color:var(--text2);border:1px solid var(--border);}
+.ts-Spring{background:#eaf3de;color:#3b6d11;border-color:#c0dd97;}
+.ts-Summer{background:#faeeda;color:#854f0b;border-color:#fac775;}
+.ts-Autumn{background:#faece7;color:#993c1d;border-color:#f5c4b3;}
+.ts-Winter{background:#e6f1fb;color:#185fa5;border-color:#b5d4f4;}
+.worn-dots{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px;}
+.worn-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);opacity:.4;}
+
+/* ── Photo cards ── */
+.photo-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;cursor:pointer;transition:all .14s;}
+.photo-card:hover{box-shadow:var(--shadow);border-color:var(--border3);}
+.photo-thumb{width:100%;height:195px;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:44px;overflow:hidden;}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;}
+.photo-body{padding:11px 13px;}
+
+/* ── Modal ── */
+.overlay{position:fixed;inset:0;background:rgba(26,23,5,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(3px);}
+.modal{background:var(--bg);border-radius:var(--radius-lg);border:1px solid var(--border2);width:100%;max-width:548px;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);}
+.modal.sm{max-width:380px;}
+.modal-head{padding:16px 18px 13px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.modal-head h2{font-family:'DM Serif Display',serif;font-size:18px;}
+.modal-body{padding:14px 18px;overflow-y:auto;flex:1;}
+.modal-foot{padding:11px 18px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0;}
+
+/* ── Form ── */
+.fr{margin-bottom:11px;}
+.fr label{display:block;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+.fr input,.fr select,.fr textarea{width:100%;}
+.inp{height:33px;padding:0 10px;}
+.sel{height:33px;padding:0 9px;}
+.txa{padding:7px 10px;resize:vertical;min-height:60px;line-height:1.5;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;}
+.color-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;}
+.cdot{width:25px;height:25px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:all .12s;flex-shrink:0;}
+.cdot:hover{transform:scale(1.14);}
+.cdot.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--accent);}
+.chip-wrap{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;max-height:172px;overflow-y:auto;padding:1px;}
+.chip{font-size:12px;padding:4px 10px;border-radius:99px;border:1px solid var(--border2);background:var(--bg);color:var(--text2);cursor:pointer;transition:all .12s;}
+.chip:hover{border-color:var(--accent);}
+.chip.on{background:var(--accent);color:var(--acc-fg);border-color:transparent;}
+input[type=file]{border:none;background:none;padding:4px 0;height:auto;font-size:13px;color:var(--text2);}
+
+/* ── Stats ── */
+.stats-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:9px;margin-bottom:14px;}
+.stat-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;}
+.stat-lbl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;}
+.stat-val{font-size:28px;font-weight:700;letter-spacing:-.04em;}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+.chart-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;}
+.chart-title{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:11px;}
+.bar-row{display:flex;align-items:center;gap:9px;margin-bottom:7px;}
+.bar-lbl{font-size:11px;color:var(--text2);width:90px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.bar-track{flex:1;height:7px;background:var(--bg3);border-radius:99px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:99px;transition:width .5s;}
+.bar-count{font-size:11px;color:var(--text3);width:18px;text-align:right;}
+
+/* ── Settings ── */
+.set-section{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:11px;overflow:hidden;}
+.set-title{padding:10px 15px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);border-bottom:1px solid var(--border);background:var(--bg2);}
+.set-row{display:flex;align-items:center;padding:11px 15px;border-bottom:1px solid var(--border);gap:11px;}
+.set-row:last-child{border-bottom:none;}
+.set-lbl{flex:1;font-size:13px;}
+.set-hint{font-size:11px;color:var(--text3);}
+.cat-item{display:flex;align-items:center;gap:9px;padding:9px 15px;border-bottom:1px solid var(--border);}
+.cat-item:last-child{border-bottom:none;}
+
+/* ── Empty ── */
+.empty{text-align:center;padding:4rem 1rem;color:var(--text3);}
+.empty .ei{font-size:44px;margin-bottom:12px;}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--accent);color:var(--acc-fg);padding:9px 20px;border-radius:99px;font-size:13px;font-weight:500;opacity:0;pointer-events:none;transition:all .22s;z-index:9999;box-shadow:var(--shadow-lg);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── AUTH SCREEN ── */
+#auth-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9000;padding:24px;}
+.auth-box{width:100%;max-width:340px;background:var(--bg);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:30px 26px;box-shadow:var(--shadow-lg);}
+.auth-box h1{font-family:'DM Serif Display',serif;font-size:24px;text-align:center;margin-bottom:4px;}
+.auth-box p{font-size:12px;color:var(--text3);text-align:center;margin-bottom:22px;}
+.auth-inp{width:100%;height:44px;padding:0 13px;margin-bottom:10px;font-size:14px;border-radius:var(--radius-lg);border:1px solid var(--border2);background:var(--bg);}
+.auth-inp:focus{border-color:var(--accent);outline:none;}
+.auth-btns{display:flex;gap:8px;margin-top:4px;}
+.auth-btns button{flex:1;height:44px;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--border2);background:var(--bg);color:var(--text);transition:all .12s;}
+.auth-btns .ap{background:var(--accent);color:var(--acc-fg);border-color:transparent;}
+.auth-btns button:hover{opacity:.85;}
+.auth-err{font-size:12px;color:#a32d2d;text-align:center;margin-top:10px;min-height:16px;}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:#3B9E57;display:inline-block;margin-right:5px;flex-shrink:0;vertical-align:middle;}
+.sync-dot.syncing{background:#F0A500;animation:sdpulse 1s infinite;}
+.sync-dot.error{background:#a32d2d;}
+@keyframes sdpulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+</style>
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import{getAuth,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import{getFirestore,doc,collection,setDoc,deleteDoc,onSnapshot,writeBatch}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ══════════════════════════════════════════
+// 🔧 YOUR FIREBASE CONFIG
+// ══════════════════════════════════════════
+const firebaseConfig={
+  apiKey:"AIzaSyAVbb42yoQsk6CeOY5P-Gmd7iWpECPUZLA",
+  authDomain:"wardrobe-21sj.firebaseapp.com",
+  databaseURL:"https://wardrobe-21sj-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"wardrobe-21sj",
+  storageBucket:"wardrobe-21sj.firebasestorage.app",
+  messagingSenderId:"695850999386",
+  appId:"1:695850999386:web:dac736be04fb272a79c263"
+};
+// ══════════════════════════════════════════
+
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
+let _uid=null,_unsubs=[];
+
+window._fbSignOut=()=>signOut(auth);
+window._fbGetUid=()=>_uid;
+
+window.handleLogin=async()=>{
+  const e=document.getElementById('auth-email').value.trim();
+  const p=document.getElementById('auth-pass').value;
+  const err=document.getElementById('auth-err');
+  err.textContent='';
+  try{await signInWithEmailAndPassword(auth,e,p);}
+  catch(ex){err.textContent=friendlyErr(ex.code);}
+};
+window.handleSignup=async()=>{
+  const e=document.getElementById('auth-email').value.trim();
+  const p=document.getElementById('auth-pass').value;
+  const err=document.getElementById('auth-err');
+  err.textContent='';
+  if(p.length<6){err.textContent='Password must be 6+ characters.';return;}
+  try{await createUserWithEmailAndPassword(auth,e,p);}
+  catch(ex){err.textContent=friendlyErr(ex.code);}
+};
+function friendlyErr(c){return({'auth/invalid-email':'Invalid email.','auth/user-not-found':'No account with that email.','auth/wrong-password':'Wrong password.','auth/email-already-in-use':'Email already in use — try logging in.','auth/invalid-credential':'Email or password incorrect.'})[c]||'Something went wrong. Please try again.';}
+
+onAuthStateChanged(auth,user=>{
+  if(user){
+    _uid=user.uid;
+    document.getElementById('auth-screen').style.display='none';
+    document.getElementById('app-root').style.display='';
+    document.getElementById('user-email-display').textContent=user.email;
+    startListeners();
+  }else{
+    _uid=null;
+    _unsubs.forEach(u=>u());_unsubs=[];
+    document.getElementById('auth-screen').style.display='flex';
+    document.getElementById('app-root').style.display='none';
+  }
+});
+
+function startListeners(){
+  _unsubs.forEach(u=>u());_unsubs=[];
+  let initialLoad={items:false,outfits:false,wishlist:false,cats:false};
+  function checkFirstLoad(){
+    if(Object.values(initialLoad).every(Boolean)){
+      if(typeof updateBadges==='function'){updateBadges();renderCurrent();}
+    }
+  }
+  const sub=(col,setter,hydrate,key)=>onSnapshot(collection(db,'users',_uid,col),snap=>{
+    const data=snap.docs.map(d=>d.data());
+    setter(hydrate?hydratePhotos(data,col):data);
+    if(!initialLoad[key]){initialLoad[key]=true;checkFirstLoad();}
+    else{if(typeof updateBadges==='function')updateBadges();}
+  });
+  _unsubs.push(sub('items',d=>{items=d;},'true','items'));
+  _unsubs.push(sub('outfits',d=>{outfits=d;},true,'outfits'));
+  _unsubs.push(sub('wishlist',d=>{wishlist=d;},false,'wishlist'));
+  _unsubs.push(sub('cats',d=>{cats=d;if(!cats.length)seedCats();},false,'cats'));
+}
+
+async function seedCats(){
+  const b=writeBatch(db);
+  DEFAULT_CATS.forEach(c=>b.set(doc(db,'users',_uid,'cats',c.id),c));
+  await b.commit();
+}
+
+window.fbSave=async(col,item)=>{
+  if(!_uid)return;
+  setSyncDot('syncing');
+  try{
+    // Strip photos arrays (too large for Firestore) - store separately in localStorage
+    const cleaned=Object.fromEntries(
+      Object.entries(item).filter(([k,v])=>v!==undefined&&v!==null||(typeof v==='number'||typeof v==='boolean'))
+        .map(([k,v])=>{
+          if(k==='photos'||k==='photo') return null; // exclude photo data
+          if(Array.isArray(v)) return [k, v.filter(x=>x!==undefined&&x!==null)];
+          return [k,v];
+        }).filter(Boolean)
+    );
+    // Store photos in localStorage by id
+    if(item.photos&&item.photos.length) localStorage.setItem('ph_'+col+'_'+item.id, JSON.stringify(item.photos));
+    else if(item.photo) localStorage.setItem('ph_'+col+'_'+item.id, JSON.stringify([item.photo]));
+    // Store first photo URL flag in firestore
+    cleaned.hasPhoto = !!(item.photos?.length||item.photo);
+    cleaned.photoCount = item.photos?.length||( item.photo?1:0);
+    await setDoc(doc(db,'users',_uid,col,item.id),cleaned);
+    setSyncDot('ok');
+  }catch(e){setSyncDot('error');console.error('Firestore save error:',e);}
+};
+window.fbDel=async(col,id)=>{
+  if(!_uid)return;
+  try{await deleteDoc(doc(db,'users',_uid,col,id));}
+  catch(e){console.error(e);}
+};
+</script>
+</head>
+<body>
+<div id="auth-screen" style="display:flex;">
+  <div class="auth-box">
+    <h1>👗 Wardrobe</h1>
+    <p>Your synced digital closet</p>
+    <input class="auth-inp" type="email" id="auth-email" placeholder="Email address" autocomplete="email">
+    <input class="auth-inp" type="password" id="auth-pass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')handleLogin()">
+    <div style="height:1px;background:var(--border);margin:14px 0;"></div>
+    <div class="auth-btns">
+      <button onclick="handleLogin()">Log in</button>
+      <button class="ap" onclick="handleSignup()">Sign up</button>
+    </div>
+    <div class="auth-err" id="auth-err"></div>
+  </div>
+</div>
+<div id="app-root" style="display:none;width:100%;height:100%;">
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-head">
+      <h1>👗 Wardrobe</h1>
+      <p><span class="sync-dot" id="sync-dot"></span><span id="db-stat">Connecting...</span></p>
+    </div>
+
+    <div class="nav-section">
+      <span class="nav-lbl">Browse</span>
+      <button class="nav-btn active" id="nav-all" onclick="nav('all')">
+        <span class="nav-icon">🧺</span>All clothes<span class="nav-badge" id="b-all">0</span>
+      </button>
+      <button class="nav-btn" id="nav-outfits" onclick="nav('outfits')">
+        <span class="nav-icon">📸</span>Outfits<span class="nav-badge" id="b-outfits">0</span>
+      </button>
+      <button class="nav-btn" id="nav-wishlist" onclick="nav('wishlist')">
+        <span class="nav-icon">🌟</span>Wishlist<span class="nav-badge" id="b-wishlist">0</span>
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <span class="nav-lbl">Analyse</span>
+      <button class="nav-btn" id="nav-stats" onclick="nav('stats')">
+        <span class="nav-icon">📊</span>Insights
+      </button>
+      <button class="nav-btn" id="nav-calendar" onclick="nav('calendar')">
+        <span class="nav-icon">📅</span>Wear calendar
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <span class="nav-lbl">Manage</span>
+      <button class="nav-btn" id="nav-settings" onclick="nav('settings')">
+        <span class="nav-icon">⚙️</span>Settings
+      </button>
+    </div>
+
+    <div class="sidebar-foot">
+      <p id="user-email-display" style="font-size:11px;color:var(--text3);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></p>
+      <button class="btn sm danger" style="width:100%;justify-content:center;margin-bottom:6px;" onclick="window._fbSignOut()">Sign out</button>
+      <button class="btn sm" style="width:100%;justify-content:center;" onclick="exportData()">↓ Export backup</button>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div class="main" style="background:var(--bg);overflow-y:auto;flex:1;">
+    <div id="content-header"></div>
+    <div id="filter-bar-wrap"></div>
+    <div class="content" id="content" style="padding-top:0;">
+      <div class="empty"><div class="ei">⏳</div><p>Loading your wardrobe...</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ITEM FORM MODAL ── -->
+<div class="overlay" id="item-modal" style="display:none;" onclick="if(event.target===this)closeModal('item-modal')">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="item-modal-title">Add item</h2>
+      <button class="btn ghost sm" onclick="closeModal('item-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fr"><label>Name *</label><input class="inp" id="f-name" placeholder="e.g. Navy Oxford shirt"></div>
+      <div class="g2">
+        <div class="fr"><label>Type</label>
+          <select class="sel" id="f-subtype">
+            <option>T-shirt</option><option>Shirt</option><option>Blouse</option><option>Sweater</option><option>Hoodie</option>
+            <option>Jacket</option><option>Coat</option><option>Blazer</option><option>Jeans</option><option>Trousers</option>
+            <option>Shorts</option><option>Skirt</option><option>Dress</option><option>Suit</option>
+            <option>Sneakers</option><option>Boots</option><option>Heels</option><option>Sandals</option><option>Loafers</option>
+            <option>Belt</option><option>Hat</option><option>Cap</option><option>Scarf</option><option>Bag</option>
+            <option>Sunglasses</option><option>Jewellery</option><option>Underwear</option><option>Socks</option>
+            <option>Swimwear</option><option>Other</option>
+          </select>
+        </div>
+        <div class="fr"><label>Brand</label><input class="inp" id="f-brand" placeholder="e.g. Levi's"></div>
+      </div>
+      <div class="g2">
+        <div class="fr"><label>Season</label>
+          <select class="sel" id="f-season">
+            <option>All-season</option><option>Spring</option><option>Summer</option><option>Autumn</option><option>Winter</option>
+          </select>
+        </div>
+        <div class="fr"><label>Formality</label>
+          <select class="sel" id="f-occ">
+            <option>Casual</option><option>Smart casual</option><option>Business</option><option>Formal</option>
+            <option>Sportswear</option><option>Loungewear</option><option>Beachwear</option><option>Outerwear</option>
+          </select>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="fr"><label>Size</label><input class="inp" id="f-size" placeholder="M / 32 / EU42"></div>
+        <div class="fr"><label>Material</label><input class="inp" id="f-material" placeholder="e.g. 100% Cotton"></div>
+      </div>
+      <div class="g2">
+        <div class="fr"><label>Price paid</label><input class="inp" id="f-price" placeholder="e.g. £45"></div>
+        <div class="fr"><label>Condition</label>
+          <select class="sel" id="f-cond">
+            <option>New</option><option>Like new</option><option>Good</option><option>Fair</option><option>Worn</option>
+          </select>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="fr"><label>Category</label><select class="sel" id="f-cat"></select></div>
+        <div class="fr"><label>Purchase date</label><input class="inp" type="date" id="f-pdate"></div>
+      </div>
+      <div class="g2">
+        <div class="fr"><label>Store / URL</label><input class="inp" id="f-store" placeholder="ASOS, Zara.com..."></div>
+        <div class="fr"><label>Care instructions</label><input class="inp" id="f-care" placeholder="30° machine wash"></div>
+      </div>
+      <div class="fr"><label>Color</label><div class="color-row" id="color-picker"></div></div>
+      <div class="fr">
+        <label>Tags <span style="font-weight:400;color:var(--text3)">(comma-separated)</span></label>
+        <input class="inp" id="f-tags" placeholder="vintage, gift, favourite, thrifted...">
+      </div>
+      <div class="fr"><label>Notes</label><textarea class="txa" id="f-notes" placeholder="Styling ideas, fit notes..."></textarea></div>
+      <div class="fr">
+        <label>Photo</label>
+        <div id="f-photo-preview" style="margin-bottom:4px;"></div>
+        <input type="file" id="f-photo" accept="image/*" multiple onchange="previewItemPhoto(this)">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn sm danger" id="item-del-btn" style="display:none;" onclick="confirmDeleteItem()">Delete</button>
+      <button class="btn sm" onclick="closeModal('item-modal')">Cancel</button>
+      <button class="btn sm primary" onclick="saveItem()">Save item</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ITEM DETAIL MODAL ── -->
+<div class="overlay" id="detail-modal" style="display:none;" onclick="if(event.target===this)closeModal('detail-modal')">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="d-name" class="serif" style="font-size:18px;"></h2>
+      <button class="btn ghost sm" onclick="closeModal('detail-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="d-swatch" style="height:90px;border-radius:10px;margin-bottom:13px;display:flex;align-items:center;justify-content:center;font-size:38px;border:1px solid rgba(0,0,0,0.07);"></div>
+      <div id="d-photo"></div>
+      <div id="d-body"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn sm danger" onclick="confirmDeleteItem()">Delete</button>
+      <button class="btn sm" onclick="openEditItem()">Edit</button>
+      <button class="btn sm primary" onclick="closeModal('detail-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── OUTFIT MODAL ── -->
+<div class="overlay" id="outfit-modal" style="display:none;" onclick="if(event.target===this)closeModal('outfit-modal')">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="outfit-modal-title" class="serif">Add outfit</h2>
+      <button class="btn ghost sm" onclick="closeModal('outfit-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fr"><label>Name / Date *</label><input class="inp" id="of-name" placeholder="Friday brunch look · Jun 2025"></div>
+      <div class="g2">
+        <div class="fr"><label>Date</label><input class="inp" type="date" id="of-date"></div>
+        <div class="fr"><label>Occasion</label>
+          <select class="sel" id="of-occ">
+            <option value="">—</option><option>Everyday</option><option>Work</option><option>Date night</option>
+            <option>Party</option><option>Wedding</option><option>Travel</option><option>Sport</option><option>Special event</option>
+          </select>
+        </div>
+      </div>
+      <div class="fr">
+        <label>Photo</label>
+        <div id="of-photo-preview" style="margin-bottom:4px;"></div>
+        <input type="file" id="of-photo" accept="image/*" multiple onchange="previewOutfitPhoto(this)">
+      </div>
+      <div class="fr"><label>Tag items worn</label><div class="chip-wrap" id="item-picker"></div></div>
+      <div class="fr"><label>Notes</label><textarea class="txa" id="of-notes" placeholder="Where? How did you feel? What was the weather like?"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn sm danger" id="outfit-del-btn" style="display:none;" onclick="confirmDeleteOutfit()">Delete</button>
+      <button class="btn sm" onclick="closeModal('outfit-modal')">Cancel</button>
+      <button class="btn sm primary" onclick="saveOutfit()">Save outfit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CATEGORY MODAL ── -->
+<div class="overlay" id="cat-modal" style="display:none;" onclick="if(event.target===this)closeModal('cat-modal')">
+  <div class="modal sm">
+    <div class="modal-head">
+      <h2 id="cat-modal-title" class="serif">Add category</h2>
+      <button class="btn ghost sm" onclick="closeModal('cat-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fr"><label>Category name *</label><input class="inp" id="cat-name" placeholder="e.g. Swimwear, Activewear"></div>
+      <div class="fr"><label>Icon (emoji)</label><input class="inp" id="cat-icon" placeholder="🩱" maxlength="4" style="max-width:70px;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn sm danger" id="cat-del-btn" style="display:none;" onclick="deleteCategory()">Delete</button>
+      <button class="btn sm" onclick="closeModal('cat-modal')">Cancel</button>
+      <button class="btn sm primary" onclick="saveCat()">Save</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="import-input" accept=".json" style="display:none;" onchange="importData(this)">
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STORAGE: Firebase (with localStorage fallback while loading) ──────────────
+const LS = {
+  get: k => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} },
+};
+function setSyncDot(s){
+  const d=document.getElementById('sync-dot');
+  if(!d)return;
+  d.className='sync-dot'+(s==='syncing'?' syncing':s==='error'?' error':'');
+}
+
+// Get photos for an item/outfit from localStorage (photos stored locally for performance)
+function getPhotos(col, id) {
+  try { return JSON.parse(localStorage.getItem('ph_'+col+'_'+id)||'[]'); } catch { return []; }
+}
+// Hydrate photos back onto items/outfits after Firestore load
+function hydratePhotos(list, col) {
+  return list.map(item => ({
+    ...item,
+    photos: getPhotos(col, item.id),
+    photo: (getPhotos(col, item.id))[0] || null
+  }));
+}
+
+// ── DATA ──────────────────────────────────────────────────────────────────────
+let items = [], outfits = [], cats = [], wishlist = [];
+let view = 'all', filterCat = null, gridMode = 'grid';
+let editItemId = null, viewItemId = null, editOutfitId = null, editCatId = null;
+let selectedOutfitItems = new Set();
+let pendingItemPhotos = [], pendingOutfitPhotos = [];
+
+const DEFAULT_CATS = [
+  {id:'cat-tops',name:'Tops',icon:'👕'},{id:'cat-bottoms',name:'Bottoms',icon:'👖'},
+  {id:'cat-dresses',name:'Dresses & Skirts',icon:'👗'},{id:'cat-outer',name:'Outerwear',icon:'🧥'},
+  {id:'cat-shoes',name:'Footwear',icon:'👟'},{id:'cat-acc',name:'Accessories',icon:'👜'},
+  {id:'cat-sport',name:'Sportswear',icon:'🏃'},{id:'cat-swim',name:'Swimwear',icon:'🩱'},
+  {id:'cat-suits',name:'Suits & Formal',icon:'🤵'},{id:'cat-other',name:'Other',icon:'🏷️'},
+];
+
+const COLORS = [
+  {n:'White',h:'#F5F5F5'},{n:'Off-white',h:'#FAF7F0'},{n:'Black',h:'#1a1a1a'},{n:'Charcoal',h:'#4a4a4a'},
+  {n:'Grey',h:'#9E9E9E'},{n:'Silver',h:'#C0C0C0'},{n:'Navy',h:'#1B3A6B'},{n:'Blue',h:'#2196F3'},
+  {n:'Light blue',h:'#90CAF9'},{n:'Sky blue',h:'#B3E5FC'},{n:'Teal',h:'#00796B'},{n:'Cyan',h:'#00BCD4'},
+  {n:'Green',h:'#388E3C'},{n:'Olive',h:'#827717'},{n:'Lime',h:'#8BC34A'},{n:'Mint',h:'#B2DFDB'},
+  {n:'Khaki',h:'#C8B560'},{n:'Beige',h:'#D7C4A3'},{n:'Camel',h:'#C19A6B'},{n:'Tan',h:'#D2B48C'},
+  {n:'Brown',h:'#795548'},{n:'Burgundy',h:'#7B1829'},{n:'Red',h:'#D32F2F'},{n:'Coral',h:'#FF7043'},
+  {n:'Orange',h:'#F57C00'},{n:'Amber',h:'#FFA000'},{n:'Yellow',h:'#FBC02D'},{n:'Gold',h:'#C9A72A'},
+  {n:'Pink',h:'#E91E63'},{n:'Blush',h:'#F4A6B0'},{n:'Rose',h:'#E8A0A8'},{n:'Mauve',h:'#B07898'},
+  {n:'Purple',h:'#7B1FA2'},{n:'Lavender',h:'#B39DDB'},{n:'Lilac',h:'#DDA0DD'},
+  {n:'Multicolor',h:'linear-gradient(135deg,#f00,#ff0,#0f0,#00f)'},
+];
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function isLight(h) {
+  if (!h || h.startsWith('linear') || h.startsWith('repeat')) return true;
+  try { const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16); return (r*299+g*587+b*114)/1000>155; } catch { return true; }
+}
+function hex(name) { return (COLORS.find(c=>c.n===name)||{h:'#e0e0e0'}).h; }
+function f2b(file) { return new Promise((r,j)=>{ const rd=new FileReader(); rd.onload=e=>r(e.target.result); rd.onerror=j; rd.readAsDataURL(file); }); }
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+function init() { /* Firebase listeners populate data automatically */ }
+
+async function persist(col, item) {
+  if (window.fbSave) await window.fbSave(col, item);
+}
+async function persistDel(col, id) {
+  if (window.fbDel) await window.fbDel(col, id);
+}
+
+function updateBadges() {
+  const s=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  s('b-all',items.length); s('b-outfits',outfits.length);
+  const wlEl=document.getElementById('b-wishlist'); if(wlEl)wlEl.textContent=wishlist.length;
+  s('db-stat',items.length+' item'+(items.length!==1?'s':'')+' · synced');
+  setSyncDot('ok');
+}
+function buildSidebarCats() {}
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+function nav(v, cat=null) {
+  view = v; filterCat = cat;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const target = document.getElementById('nav-'+v);
+  if (target) target.classList.add('active');
+  renderCurrent();
+}
+
+function renderCurrent() {
+  if (view==='all')       renderItems();
+  else if (view==='outfits')   renderOutfits();
+  else if (view==='wishlist')  renderWishlist();
+  else if (view==='stats')     renderStats();
+  else if (view==='calendar')  renderCalendar();
+  else if (view==='settings')  renderSettings();
+}
+
+// ── ITEMS VIEW ────────────────────────────────────────────────────────────────
+function renderItems() {
+  const search = document.getElementById('item-search')?.value?.toLowerCase()||'';
+  const cf    = document.getElementById('f-color-fil')?.value||'';
+  const typef = document.getElementById('f-type-fil')?.value||'';
+  const bf    = document.getElementById('f-brand-fil')?.value||'';
+  const sf    = document.getElementById('f-season-fil')?.value||'';
+  const of    = document.getElementById('f-occ-fil')?.value||'';
+  const catf  = document.getElementById('f-cat-fil')?.value||'';
+  const sort  = document.getElementById('f-sort')?.value||'name';
+
+  let list = items.filter(i => {
+    if (search && ![i.name,i.brand||'',i.subtype||'',...(i.tags||[])].join(' ').toLowerCase().includes(search)) return false;
+    if (cf    && i.color     !== cf)   return false;
+    if (typef && i.subtype   !== typef) return false;
+    if (bf    && i.brand     !== bf)   return false;
+    if (sf    && i.season    !== sf)   return false;
+    if (of    && i.occasion  !== of)   return false;
+    if (catf  && i.category  !== catf) return false;
+    return true;
+  });
+
+  const fns = {
+    name:   (a,b)=>a.name.localeCompare(b.name),
+    brand:  (a,b)=>(a.brand||'').localeCompare(b.brand||''),
+    color:  (a,b)=>(a.color||'').localeCompare(b.color||''),
+    season: (a,b)=>(a.season||'').localeCompare(b.season||''),
+    worn:   (a,b)=>(b.wornCount||0)-(a.wornCount||0),
+    newest: (a,b)=>b.addedAt-a.addedAt,
+    price:  (a,b)=>parseFloat((b.price||'').replace(/[^0-9.]/g,'')||0)-parseFloat((a.price||'').replace(/[^0-9.]/g,'')||0),
+  };
+  list.sort(fns[sort]||fns.name);
+
+  const colors  = [...new Set(items.map(i=>i.color).filter(Boolean))].sort();
+  const brands  = [...new Set(items.map(i=>i.brand).filter(Boolean))].sort();
+  const types   = [...new Set(items.map(i=>i.subtype).filter(Boolean))].sort();
+  const occs    = [...new Set(items.map(i=>i.occasion).filter(Boolean))].sort();
+
+  // Header
+  document.getElementById('content-header').innerHTML = `
+    <div class="content-head">
+      <div class="content-head-title">All clothes</div>
+      <div class="content-head-sub">${list.length} of ${items.length} item${items.length!==1?'s':''}</div>
+    </div>`;
+
+  // Filter bar matching the photo
+  document.getElementById('filter-bar-wrap').innerHTML = `
+    <div class="filter-bar">
+      <div class="filter-bar-search">
+        <input type="text" id="item-search" placeholder="Search name, brand, tag..." value="${search}" oninput="renderCurrent()">
+      </div>
+      <select class="fsel" id="f-type-fil" onchange="renderCurrent()"><option value="">All types</option>${types.map(t=>`<option ${typef===t?'selected':''}>${t}</option>`).join('')}</select>
+      <select class="fsel" id="f-color-fil" onchange="renderCurrent()"><option value="">All colors</option>${colors.map(c=>`<option ${cf===c?'selected':''}>${c}</option>`).join('')}</select>
+      <select class="fsel" id="f-brand-fil" onchange="renderCurrent()"><option value="">All brands</option>${brands.map(b=>`<option ${bf===b?'selected':''}>${b}</option>`).join('')}</select>
+      <select class="fsel" id="f-season-fil" onchange="renderCurrent()"><option value="">All seasons</option>${['Spring','Summer','Autumn','Winter','All-season'].map(s=>`<option ${sf===s?'selected':''}>${s}</option>`).join('')}</select>
+      <select class="fsel" id="f-occ-fil" onchange="renderCurrent()"><option value="">All styles</option>${occs.map(o=>`<option ${of===o?'selected':''}>${o}</option>`).join('')}</select>
+      <select class="fsel" id="f-cat-fil" onchange="renderCurrent()"><option value="">All categories</option>${cats.map(c=>`<option value="${c.id}" ${catf===c.id?'selected':''}>${c.name}</option>`).join('')}</select>
+      <select class="fsel" id="f-sort" onchange="renderCurrent()">
+        ${[['name','Name A–Z'],['brand','Brand'],['color','Color'],['season','Season'],['worn','Most worn'],['newest','Newest'],['price','Price']].map(([v,l])=>`<option value="${v}" ${sort===v?'selected':''}>${l}</option>`).join('')}
+      </select>
+      <div class="view-toggle">
+        <button class="view-btn ${gridMode==='grid'?'active':''}" onclick="setGridMode('grid')" title="Grid">⊞</button>
+        <button class="view-btn ${gridMode==='list'?'active':''}" onclick="setGridMode('list')" title="List">☰</button>
+      </div>
+      <button class="btn sm primary" onclick="openAddItem()" style="flex-shrink:0;">+ Add item</button>
+    </div>`;
+
+  const el = document.getElementById('content');
+  if (!list.length) {
+    el.innerHTML = `<div class="empty"><div class="ei">👗</div><p>${items.length?'No items match your filters.':'Add your first clothing item to get started!'}</p></div>`;
+    return;
+  }
+  if (gridMode === 'list') {
+    el.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;">${list.map(itemListRow).join('')}</div>`;
+  } else {
+    el.innerHTML = `<div class="grid">${list.map(itemCard).join('')}</div>`;
+  }
+}
+
+function setGridMode(m) { gridMode = m; renderCurrent(); }
+
+function itemListRow(item) {
+  const h = hex(item.color); const fg = isLight(h)?'#1a1705':'#faf9f6';
+  const cat = cats.find(c=>c.id===item.category)||{};
+  const photos = item.photos||[]; const firstPhoto = photos[0]||item.photo||null;
+  const thumb = firstPhoto
+    ? `<div style="width:42px;height:42px;border-radius:8px;flex-shrink:0;overflow:hidden;"><img src="${firstPhoto}" style="width:100%;height:100%;object-fit:cover;"></div>`
+    : `<div style="width:42px;height:42px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid rgba(0,0,0,0.07);">${cat.icon||'👕'}</div>`;
+  return `<div class="card" onclick="openDetail('${item.id}')" style="display:flex;align-items:center;gap:13px;padding:10px 14px;">
+    ${thumb}
+    <div style="flex:1;min-width:0;">
+      <div class="card-name">${item.name}</div>
+      <div class="card-sub">${[item.brand,item.subtype,item.size].filter(Boolean).join(' · ')||cat.name||'—'}</div>
+    </div>
+    <div class="tags" style="flex-shrink:0;">
+      ${item.season&&item.season!=='All-season'?`<span class="tag ts-${item.season}">${item.season}</span>`:''}
+    </div>
+  </div>`;
+}
+
+function itemCard(item) {
+  const h = hex(item.color); const fg = isLight(h)?'#1a1705':'#faf9f6';
+  const cat = cats.find(c=>c.id===item.category)||{};
+  const photos = item.photos||[];
+  const firstPhoto = photos[0] || item.photo || null;
+  const tags = [];
+  if (item.season && item.season!=='All-season') tags.push(`<span class="tag ts-${item.season}">${item.season}</span>`);
+  if (item.occasion && item.occasion!=='Casual') tags.push(`<span class="tag">${item.occasion}</span>`);
+  (item.tags||[]).slice(0,2).forEach(t=>tags.push(`<span class="tag">${t}</span>`));
+  const dots = item.wornCount ? `<div class="worn-dots">${Array.from({length:Math.min(item.wornCount,12)},()=>'<div class="worn-dot"></div>').join('')}</div>` : '';
+  const swatchHtml = firstPhoto
+    ? `<div class="swatch" style="padding:0;overflow:hidden;position:relative;">
+        <img src="${firstPhoto}" style="width:100%;height:100%;object-fit:cover;display:block;">
+        ${photos.length>1?`<span style="position:absolute;bottom:4px;right:5px;background:rgba(0,0,0,.45);color:#fff;font-size:9px;padding:1px 5px;border-radius:99px;">${photos.length}</span>`:''}
+      </div>`
+    : `<div class="swatch" style="background:${h};color:${fg};">${cat.icon||'👕'}</div>`;
+  return `<div class="card card-pad" onclick="openDetail('${item.id}')">
+    ${swatchHtml}
+    <div class="card-name">${item.name}</div>
+    <div class="card-sub">${[item.brand,item.subtype,item.size].filter(Boolean).join(' · ')||cat.name||'—'}</div>
+    <div class="tags">${tags.join('')}</div>${dots}
+  </div>`;
+}
+
+// ── ITEM DETAIL ───────────────────────────────────────────────────────────────
+function openDetail(id) {
+  viewItemId = id; editItemId = null;
+  const item = items.find(i=>i.id===id); if (!item) return;
+  const h = hex(item.color); const fg = isLight(h)?'#1a1705':'#faf9f6';
+  const cat = cats.find(c=>c.id===item.category)||{name:'—'};
+  const wornIn = outfits.filter(o=>(o.items||[]).includes(id)).length;
+  document.getElementById('d-name').textContent = item.name;
+  const sw = document.getElementById('d-swatch');
+  sw.style.background = h; sw.style.color = fg; sw.textContent = cat.icon||'👕';
+  const allPhotos = item.photos||[]; if(item.photo && !allPhotos.length) allPhotos.push(item.photo);
+  document.getElementById('d-photo').innerHTML = allPhotos.length
+    ? `<div style="display:grid;grid-template-columns:${allPhotos.length>1?'1fr 1fr':'1fr'};gap:6px;margin-bottom:13px;">${allPhotos.map((p,i)=>`<img src="${p}" style="width:100%;border-radius:8px;${i===0&&allPhotos.length===1?'max-height:240px;':'height:120px;'};object-fit:cover;">`).join('')}</div>` : '';
+  const rows = [
+    ['Category',cat.name],['Sub-type',item.subtype||'—'],['Brand',item.brand||'—'],['Color',item.color||'—'],
+    ['Size',item.size||'—'],['Season',item.season||'—'],['Style',item.occasion||'—'],['Material',item.material||'—'],
+    ['Condition',item.condition||'—'],['Price paid',item.price||'—'],['Store',item.store||'—'],['Purchased',item.purchaseDate||'—'],
+    ['Care',item.care||'—'],['Worn in outfits',wornIn],['Total wears',item.wornCount||0],
+  ];
+  document.getElementById('d-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 18px;margin-bottom:12px;">
+      ${rows.map(([l,v])=>`<div>
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">${l}</div>
+        <div style="font-size:13px;font-weight:500;">${v}</div>
+      </div>`).join('')}
+    </div>
+    ${item.tags?.length ? `<div class="tags" style="margin-bottom:9px;">${item.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>` : ''}
+    ${item.notes ? `<p style="font-size:13px;color:var(--text2);line-height:1.65;">${item.notes}</p>` : ''}
+  `;
+  openModal('detail-modal');
+}
+
+function openEditItem() { closeModal('detail-modal'); openAddItem(viewItemId); }
+
+// ── ITEM FORM ─────────────────────────────────────────────────────────────────
+function openAddItem(id=null) {
+  editItemId = id; viewItemId = id || viewItemId;
+  const item = id ? items.find(i=>i.id===id) : null;
+  document.getElementById('item-modal-title').textContent = id ? 'Edit item' : 'Add item';
+  document.getElementById('item-del-btn').style.display = id ? '' : 'none';
+  document.getElementById('f-cat').innerHTML = cats.map(c=>`<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+  const v = (fid, val) => { const e=document.getElementById(fid); if(e) e.value=val||''; };
+  v('f-name',item?.name); v('f-brand',item?.brand);
+  if(item?.subtype){const st=document.getElementById('f-subtype');if(st)st.value=item.subtype;}
+  v('f-size',item?.size); v('f-material',item?.material); v('f-price',item?.price);
+  v('f-pdate',item?.purchaseDate); v('f-store',item?.store); v('f-care',item?.care);
+  v('f-tags',(item?.tags||[]).join(', ')); v('f-notes',item?.notes);
+  if (item?.category) document.getElementById('f-cat').value = item.category;
+  document.getElementById('f-season').value = item?.season || 'All-season';
+  document.getElementById('f-occ').value    = item?.occasion || 'Casual';
+  document.getElementById('f-cond').value   = item?.condition || 'New';
+  pendingItemPhotos = [...(item?.photos||[])]; if(item?.photo && !pendingItemPhotos.length) pendingItemPhotos.push(item.photo);
+  document.getElementById('f-photo').value = '';
+  renderItemPhotoPreviews();
+  buildColorPicker(item?.color || null);
+  openModal('item-modal');
+}
+
+function buildColorPicker(sel) {
+  document.getElementById('color-picker').innerHTML = COLORS.map(c =>
+    `<div class="cdot ${sel===c.n?'on':''}" title="${c.n}" style="background:${c.h};" onclick="selectColor('${c.n}',this)"></div>`
+  ).join('');
+}
+function selectColor(n, dot) { document.querySelectorAll('.cdot').forEach(d=>d.classList.remove('on')); dot.classList.add('on'); }
+function getColor() { const d=document.querySelector('.cdot.on'); return d?d.title:null; }
+
+async function previewItemPhoto(inp) {
+  const files = Array.from(inp.files); if (!files.length) return;
+  for (const file of files) { pendingItemPhotos.push(await f2b(file)); }
+  inp.value = '';
+  renderItemPhotoPreviews();
+}
+function removeItemPhoto(idx) {
+  pendingItemPhotos.splice(idx, 1);
+  renderItemPhotoPreviews();
+}
+function renderItemPhotoPreviews() {
+  const el = document.getElementById('f-photo-preview');
+  if (!pendingItemPhotos.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">${pendingItemPhotos.map((p,i)=>`
+    <div style="position:relative;width:80px;height:80px;flex-shrink:0;">
+      <img src="${p}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;display:block;">
+      <button onclick="removeItemPhoto(${i})" style="position:absolute;top:-5px;right:-5px;width:20px;height:20px;border-radius:50%;background:#1a1705;color:#fff;border:none;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;line-height:1;">✕</button>
+    </div>`).join('')}</div>`;
+}
+
+function saveItem() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { showToast('Please enter a name.'); return; }
+  const orig = editItemId ? items.find(i=>i.id===editItemId) : null;
+  const item = {
+    id: editItemId||uid(), name,
+    category:     document.getElementById('f-cat').value,
+    subtype:      document.getElementById('f-subtype').value,
+    brand:        document.getElementById('f-brand').value.trim(),
+    size:         document.getElementById('f-size').value.trim(),
+    season:       document.getElementById('f-season').value,
+    occasion:     document.getElementById('f-occ').value,
+    condition:    document.getElementById('f-cond').value,
+    material:     document.getElementById('f-material').value.trim(),
+    price:        document.getElementById('f-price').value.trim(),
+    purchaseDate: document.getElementById('f-pdate').value,
+    store:        document.getElementById('f-store').value.trim(),
+    care:         document.getElementById('f-care').value.trim(),
+    color:        getColor()||'Other',
+    tags:         document.getElementById('f-tags').value.split(',').map(t=>t.trim()).filter(Boolean),
+    notes:        document.getElementById('f-notes').value.trim(),
+    photos:       [...pendingItemPhotos],
+    photo:        pendingItemPhotos[0]||null,
+    wornCount:    orig?.wornCount||0,
+    addedAt:      orig?.addedAt||Date.now(),
+    updatedAt:    Date.now(),
+  };
+  // Update local state immediately
+  if (editItemId) items = items.map(i=>i.id===editItemId?item:i); else items.push(item);
+  // Save photos to localStorage
+  if(item.photos.length) localStorage.setItem('ph_items_'+item.id, JSON.stringify(item.photos));
+  // Close modal and re-render immediately
+  const wasEditing = editItemId;
+  closeModal('item-modal');
+  updateBadges();
+  renderCurrent();
+  showToast(wasEditing ? 'Item updated ✓' : 'Item added ✓');
+  // Save to Firebase in background
+  persist('items', item);
+}
+
+function confirmDeleteItem() {
+  const id = viewItemId||editItemId;
+  if (!id || !confirm('Delete this item? It will be removed from any outfits.')) return;
+  // Update local state immediately
+  items = items.filter(i=>i.id!==id);
+  outfits = outfits.map(o=>({...o,items:(o.items||[]).filter(x=>x!==id)}));
+  localStorage.removeItem('ph_items_'+id);
+  closeModal('detail-modal'); closeModal('item-modal');
+  viewItemId = null; editItemId = null;
+  updateBadges(); renderCurrent();
+  showToast('Item deleted');
+  // Delete from Firebase in background
+  persistDel('items', id);
+  outfits.forEach(o=>persist('outfits',o));
+}
+
+// ── OUTFITS ───────────────────────────────────────────────────────────────────
+function renderOutfits() {
+  document.getElementById('content-header').innerHTML = `
+    <div class="content-head">
+      <div class="content-head-title">Outfits</div>
+      <div class="content-head-sub">${outfits.length} outfit${outfits.length!==1?'s':''} saved</div>
+    </div>`;
+  document.getElementById('filter-bar-wrap').innerHTML = `
+    <div class="filter-bar">
+      <div class="filter-bar-search">
+        <input type="text" id="outfit-search" placeholder="Search outfits..." oninput="renderOutfits()">
+      </div>
+      <button class="btn sm primary" onclick="openAddOutfit()" style="margin-left:auto;">+ Add outfit</button>
+    </div>`;
+  const search = document.getElementById('outfit-search')?.value?.toLowerCase()||'';
+  const list = outfits.filter(o=>!search||o.name.toLowerCase().includes(search)).sort((a,b)=>b.createdAt-a.createdAt);
+  document.getElementById('content').innerHTML = list.length
+    ? `<div class="grid-lg">${list.map(outfitCard).join('')}</div>`
+    : `<div class="empty"><div class="ei">📸</div><p>Add outfit photos and tag the items you wore.<br>Your wear count will update automatically.</p></div>`;
+}
+
+function outfitCard(o) {
+  const tagged = (o.items||[]).map(id=>items.find(i=>i.id===id)).filter(Boolean);
+  const allPhotos = o.photos||[]; if(o.photo && !allPhotos.length) allPhotos.push(o.photo);
+  const firstPhoto = allPhotos[0]||null;
+  const dots = tagged.slice(0,7).map(t=>{
+    const h=hex(t.color);
+    return `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${h};border:0.5px solid rgba(0,0,0,.1);"></span>`;
+  }).join('');
+  return `<div class="photo-card" onclick="openEditOutfit('${o.id}')">
+    <div class="photo-thumb" style="position:relative;">
+      ${firstPhoto?`<img src="${firstPhoto}" alt="">`:'📸'}
+      ${allPhotos.length>1?`<span style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.5);color:#fff;font-size:10px;padding:2px 7px;border-radius:99px;">📷 ${allPhotos.length}</span>`:''}
+    </div>
+    <div class="photo-body">
+      <div class="card-name">${o.name}</div>
+      ${o.occasion?`<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">${o.occasion}</div>`:''}
+      <div style="font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:6px;">${tagged.length?tagged.map(t=>t.name).join(', '):'No items tagged'}</div>
+      <div style="display:flex;gap:3px;">${dots}</div>
+    </div>
+  </div>`;
+}
+
+function openAddOutfit() {
+  editOutfitId = null; selectedOutfitItems = new Set(); pendingOutfitPhotos = [];
+  document.getElementById('outfit-modal-title').textContent = 'Add outfit';
+  document.getElementById('outfit-del-btn').style.display = 'none';
+  document.getElementById('of-name').value = '';
+  document.getElementById('of-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('of-occ').value  = '';
+  document.getElementById('of-notes').value = '';
+  document.getElementById('of-photo').value = '';
+  renderOutfitPhotoPreviews();
+  buildItemPicker();
+  openModal('outfit-modal');
+}
+
+function openEditOutfit(id) {
+  const o = outfits.find(x=>x.id===id); if (!o) return;
+  editOutfitId = id; selectedOutfitItems = new Set(o.items||[]);
+  pendingOutfitPhotos = [...(o.photos||[])]; if(o.photo && !pendingOutfitPhotos.length) pendingOutfitPhotos.push(o.photo);
+  document.getElementById('outfit-modal-title').textContent = 'Edit outfit';
+  document.getElementById('outfit-del-btn').style.display = '';
+  document.getElementById('of-name').value  = o.name;
+  document.getElementById('of-date').value  = o.date||'';
+  document.getElementById('of-occ').value   = o.occasion||'';
+  document.getElementById('of-notes').value = o.notes||'';
+  document.getElementById('of-photo').value = '';
+  renderOutfitPhotoPreviews();
+  buildItemPicker();
+  openModal('outfit-modal');
+}
+
+async function previewOutfitPhoto(inp) {
+  const files = Array.from(inp.files); if (!files.length) return;
+  for (const file of files) { pendingOutfitPhotos.push(await f2b(file)); }
+  inp.value = '';
+  renderOutfitPhotoPreviews();
+}
+function removeOutfitPhoto(idx) {
+  pendingOutfitPhotos.splice(idx, 1);
+  renderOutfitPhotoPreviews();
+}
+function renderOutfitPhotoPreviews() {
+  const el = document.getElementById('of-photo-preview');
+  if (!pendingOutfitPhotos.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">${pendingOutfitPhotos.map((p,i)=>`
+    <div style="position:relative;width:80px;height:80px;flex-shrink:0;">
+      <img src="${p}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;display:block;">
+      <button onclick="removeOutfitPhoto(${i})" style="position:absolute;top:-5px;right:-5px;width:20px;height:20px;border-radius:50%;background:#1a1705;color:#fff;border:none;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;line-height:1;">✕</button>
+    </div>`).join('')}</div>`;
+}
+
+function buildItemPicker() {
+  const el = document.getElementById('item-picker');
+  if (!items.length) { el.innerHTML = '<span style="font-size:12px;color:var(--text3);">Add wardrobe items first to tag them here.</span>'; return; }
+  el.innerHTML = [...items].sort((a,b)=>a.name.localeCompare(b.name)).map(item => {
+    const cat = cats.find(c=>c.id===item.category)||{};
+    return `<span class="chip ${selectedOutfitItems.has(item.id)?'on':''}" onclick="toggleOI('${item.id}',this)">${cat.icon||''} ${item.name}</span>`;
+  }).join('');
+}
+function toggleOI(id, el) {
+  if (selectedOutfitItems.has(id)) { selectedOutfitItems.delete(id); el.classList.remove('on'); }
+  else { selectedOutfitItems.add(id); el.classList.add('on'); }
+}
+
+function saveOutfit() {
+  const name = document.getElementById('of-name').value.trim();
+  if (!name) { showToast('Please enter a name.'); return; }
+  const isNew = !editOutfitId;
+  const outfit = {
+    id: editOutfitId||uid(), name, photos: [...pendingOutfitPhotos], photo: pendingOutfitPhotos[0]||null,
+    items: [...selectedOutfitItems],
+    date:     document.getElementById('of-date').value,
+    occasion: document.getElementById('of-occ').value,
+    notes:    document.getElementById('of-notes').value.trim(),
+    createdAt: editOutfitId ? (outfits.find(o=>o.id===editOutfitId)||{}).createdAt||Date.now() : Date.now(),
+    updatedAt: Date.now(),
+  };
+  // Update local state immediately
+  if (editOutfitId) outfits = outfits.map(o=>o.id===editOutfitId?outfit:o); else outfits.push(outfit);
+  // Update worn counts locally
+  if (isNew) {
+    outfit.items.forEach(id => {
+      const item = items.find(i=>i.id===id);
+      if (item) { item.wornCount = (item.wornCount||0)+1; persist('items', item); }
+    });
+  }
+  // Save photos to localStorage
+  if(outfit.photos.length) localStorage.setItem('ph_outfits_'+outfit.id, JSON.stringify(outfit.photos));
+  // Close modal and re-render immediately
+  closeModal('outfit-modal');
+  updateBadges();
+  renderCurrent();
+  showToast(isNew ? 'Outfit saved ✓' : 'Outfit updated ✓');
+  // Save to Firebase in background
+  persist('outfits', outfit);
+}
+
+function confirmDeleteOutfit() {
+  if (!editOutfitId || !confirm('Delete this outfit?')) return;
+  const id = editOutfitId;
+  outfits = outfits.filter(o=>o.id!==id);
+  localStorage.removeItem('ph_outfits_'+id);
+  closeModal('outfit-modal');
+  updateBadges(); renderCurrent();
+  showToast('Outfit deleted');
+  // Delete from Firebase in background
+  persistDel('outfits', id);
+}
+
+
+// ── WISHLIST ──────────────────────────────────────────────────────────────────
+function renderWishlist() {
+  document.getElementById('content-header').innerHTML = `
+    <div class="content-head">
+      <div class="content-head-title">Wishlist</div>
+      <div class="content-head-sub">${wishlist.length} item${wishlist.length!==1?'s':''}</div>
+    </div>`;
+  document.getElementById('filter-bar-wrap').innerHTML = `
+    <div class="filter-bar">
+      <div class="filter-bar-search">
+        <input type="text" id="wl-search" placeholder="Search wishlist..." oninput="renderWishlist()">
+      </div>
+      <button class="btn sm primary" onclick="openAddWishlist()" style="margin-left:auto;">+ Add item</button>
+    </div>`;
+  const search = document.getElementById('wl-search')?.value?.toLowerCase()||'';
+  const list = wishlist.filter(w=>!search||w.name.toLowerCase().includes(search)||( w.brand||'').toLowerCase().includes(search));
+  const el = document.getElementById('content');
+  if (!list.length) {
+    el.innerHTML = `<div class="empty"><div class="ei">🌟</div><p>${wishlist.length?'No items match.':'Save items you want to buy here!'}</p></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="grid">${list.map(w=>`
+    <div class="card card-pad" style="position:relative;">
+      <div class="swatch" style="background:var(--bg3);font-size:28px;">🌟</div>
+      <div class="card-name">${w.name}</div>
+      <div class="card-sub">${[w.brand,w.price].filter(Boolean).join(' · ')||'—'}</div>
+      ${w.url?`<a href="${w.url}" target="_blank" style="font-size:11px;color:var(--text2);text-decoration:none;display:block;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🔗 ${w.url}</a>`:''}
+      <div class="tags" style="margin-top:6px;">${w.priority?`<span class="tag" style="background:#faeeda;color:#854f0b;border-color:#fac775;">${w.priority}</span>`:''}</div>
+      <div style="display:flex;gap:6px;margin-top:10px;">
+        <button class="btn sm" onclick="event.stopPropagation();moveWishlistToWardrobe('${w.id}')" title="Move to wardrobe">→ Add to wardrobe</button>
+        <button class="btn sm danger" onclick="event.stopPropagation();deleteWishlistItem('${w.id}')">✕</button>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+async function openAddWishlist() {
+  const name = prompt('Item name:'); if (!name) return;
+  const brand = prompt('Brand (optional):') || '';
+  const price = prompt('Price (optional):') || '';
+  const url   = prompt('Link/URL (optional):') || '';
+  const priority = prompt('Priority? (High / Medium / Low):') || '';
+  wishlist.push({ id: uid(), name: name.trim(), brand, price, url, priority, addedAt: Date.now() });
+  persist(); updateBadges(); renderWishlist();
+  showToast('Added to wishlist ✓');
+}
+
+async function deleteWishlistItem(id) {
+  if (!confirm('Remove from wishlist?')) return;
+  wishlist = wishlist.filter(w=>w.id!==id);
+  persist(); updateBadges(); renderWishlist();
+  showToast('Removed');
+}
+
+async function moveWishlistToWardrobe(id) {
+  const w = wishlist.find(x=>x.id===id); if (!w) return;
+  wishlist = wishlist.filter(x=>x.id!==id);
+  items.push({ id: uid(), name: w.name, brand: w.brand||'', price: w.price||'', category: cats[0]?.id||'', color:'Other', season:'All-season', occasion:'Casual', condition:'New', tags:[], wornCount:0, addedAt:Date.now(), updatedAt:Date.now() });
+  persist(); updateBadges(); renderWishlist();
+  showToast('Moved to wardrobe ✓');
+}
+
+// ── WEAR CALENDAR ─────────────────────────────────────────────────────────────
+function renderCalendar() {
+  document.getElementById('content-header').innerHTML = `
+    <div class="content-head">
+      <div class="content-head-title">Wear calendar</div>
+      <div class="content-head-sub">${outfits.length} outfit${outfits.length!==1?'s':''} logged</div>
+    </div>`;
+  document.getElementById('filter-bar-wrap').innerHTML = '';
+  const el = document.getElementById('content');
+  if (!outfits.length) {
+    el.innerHTML = `<div class="empty"><div class="ei">📅</div><p>Log outfits with dates to see them on your calendar.</p></div>`;
+    return;
+  }
+  // Build month groups
+  const byMonth = {};
+  outfits.filter(o=>o.date).sort((a,b)=>b.date.localeCompare(a.date)).forEach(o=>{
+    const d = new Date(o.date); const key = d.toLocaleString('default',{month:'long',year:'numeric'});
+    if (!byMonth[key]) byMonth[key] = [];
+    byMonth[key].push(o);
+  });
+  const noDate = outfits.filter(o=>!o.date);
+  el.innerHTML = Object.entries(byMonth).map(([month, outs])=>`
+    <div style="margin-bottom:24px;">
+      <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;">${month}</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${outs.map(o=>{
+          const tagged = (o.items||[]).map(id=>items.find(i=>i.id===id)).filter(Boolean);
+          const d = new Date(o.date);
+          const dayName = d.toLocaleString('default',{weekday:'short'});
+          const dayNum  = d.getDate();
+          return `<div class="card" onclick="openEditOutfit('${o.id}')" style="display:flex;align-items:center;gap:14px;padding:12px 16px;cursor:pointer;">
+            <div style="text-align:center;flex-shrink:0;width:40px;">
+              <div style="font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;">${dayName}</div>
+              <div style="font-size:22px;font-weight:700;letter-spacing:-.04em;">${dayNum}</div>
+            </div>
+            <div style="width:1px;height:36px;background:var(--border2);flex-shrink:0;"></div>
+            ${o.photo?`<img src="${o.photo}" style="width:44px;height:44px;border-radius:8px;object-fit:cover;flex-shrink:0;">`:'<div style="width:44px;height:44px;border-radius:8px;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">📸</div>'}
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;margin-bottom:2px;">${o.name}</div>
+              <div style="font-size:11px;color:var(--text2);">${tagged.map(t=>t.name).join(', ')||'No items tagged'}</div>
+            </div>
+            ${o.occasion?`<span class="tag">${o.occasion}</span>`:''}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`).join('') +
+    (noDate.length?`<div style="margin-bottom:24px;"><div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;">No date</div><div style="display:flex;flex-direction:column;gap:8px;">${noDate.map(o=>`<div class="card" onclick="openEditOutfit('${o.id}')" style="display:flex;align-items:center;gap:14px;padding:12px 16px;cursor:pointer;">${o.photo?`<img src="${o.photo}" style="width:44px;height:44px;border-radius:8px;object-fit:cover;">`:'<div style="width:44px;height:44px;border-radius:8px;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:20px;">📸</div>'}<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;">${o.name}</div></div></div>`).join('')}</div></div>`:'');
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────────────
+function renderStats() {
+  document.getElementById('content-header').innerHTML = `
+    <div class="content-head">
+      <div class="content-head-title">Insights</div>
+      <div class="content-head-sub">Your wardrobe at a glance</div>
+    </div>`;
+  document.getElementById('filter-bar-wrap').innerHTML = '';
+  const el = document.getElementById('content');
+  if (!items.length) { el.innerHTML = '<div class="empty"><div class="ei">📊</div><p>Add items to see wardrobe insights.</p></div>'; return; }
+
+  const agg = key => items.reduce((acc,i) => { const k=i[key]||'Unknown'; acc[k]=(acc[k]||0)+1; return acc; }, {});
+  const catAgg = items.reduce((acc,i) => {
+    const c = cats.find(x=>x.id===i.category); const k = c?c.name:'Unknown';
+    acc[k] = (acc[k]||0)+1; return acc;
+  }, {});
+  const topWorn = items.filter(i=>i.wornCount).sort((a,b)=>(b.wornCount||0)-(a.wornCount||0)).slice(0,8);
+  const prices = items.map(i=>parseFloat((i.price||'').replace(/[^0-9.]/g,'')||0)).filter(p=>p>0);
+  const avgPrice = prices.length ? Math.round(prices.reduce((a,b)=>a+b,0)/prices.length) : null;
+  const sym = items.find(i=>i.price)?.price?.replace(/[\d.,\s]/g,'')||'£';
+
+  function chart(title, obj, color) {
+    const sorted = Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const max = Math.max(...sorted.map(x=>x[1]),1);
+    return `<div class="chart-box"><div class="chart-title">${title}</div>
+      ${sorted.map(([k,v])=>`<div class="bar-row">
+        <div class="bar-lbl">${k}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(v/max*100)}%;background:${color};"></div></div>
+        <div class="bar-count">${v}</div>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  el.innerHTML = `
+    <div class="stats-wrap">
+      ${[['Items',items.length],['Outfits',outfits.length],
+         ['Times worn',items.reduce((a,i)=>a+(i.wornCount||0),0)],
+         ['Brands',[...new Set(items.map(i=>i.brand).filter(Boolean))].length],
+         ['Categories',cats.length],
+         avgPrice ? ['Avg price',`${sym}${avgPrice}`] : null
+        ].filter(Boolean).map(([l,v])=>`<div class="stat-box"><div class="stat-lbl">${l}</div><div class="stat-val">${v}</div></div>`).join('')}
+    </div>
+    <div class="charts">
+      ${chart('By category', catAgg, '#1a1705')}
+      ${chart('By color',    agg('color'), '#D85A30')}
+      ${chart('By season',   agg('season'), '#3B6D11')}
+      ${chart('By style',    agg('occasion'), '#7B1FA2')}
+      ${chart('By condition',agg('condition'), '#185FA5')}
+      ${chart('By brand',    agg('brand'), '#C9A72A')}
+    </div>
+    ${topWorn.length ? `<div class="chart-box">
+      <div class="chart-title">Most worn items</div>
+      ${topWorn.map(i=>`<div class="bar-row">
+        <div class="bar-lbl" style="width:140px;">${i.name}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round((i.wornCount||0)/topWorn[0].wornCount*100)}%;background:#378ADD;"></div></div>
+        <div class="bar-count">${i.wornCount}</div>
+      </div>`).join('')}
+    </div>` : ''}
+  `;
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────────────────
+function renderSettings() {
+  // populate email after render
+  setTimeout(()=>{const se=document.getElementById('settings-email');if(se)se.textContent=document.getElementById('user-email-display')?.textContent||'';},50);
+  document.getElementById('content-header').innerHTML = `
+    <div class="content-head">
+      <div class="content-head-title">Settings</div>
+      <div class="content-head-sub">Manage your wardrobe</div>
+    </div>`;
+  document.getElementById('filter-bar-wrap').innerHTML = '';
+  document.getElementById('content').innerHTML = `
+    <div class="set-section">
+      <div class="set-title">Categories</div>
+      ${cats.map(c=>`<div class="cat-item">
+        <span style="font-size:19px;">${c.icon||'📁'}</span>
+        <span style="flex:1;font-size:13px;">${c.name}</span>
+        <span style="font-size:11px;color:var(--text3);margin-right:8px;">${items.filter(i=>i.category===c.id).length} items</span>
+        <button class="btn sm" onclick="openEditCat('${c.id}')">Edit</button>
+      </div>`).join('')}
+      <div style="padding:9px 15px;">
+        <button class="btn sm" onclick="openAddCat()">+ Add category</button>
+      </div>
+    </div>
+    <div class="set-section">
+      <div class="set-title">Data management</div>
+      <div class="set-row">
+        <label class="set-lbl">Export all data <span class="set-hint">— saves a JSON backup file</span></label>
+        <button class="btn sm" onclick="exportData()">↓ Export</button>
+      </div>
+      <div class="set-row">
+        <label class="set-lbl">Import data <span class="set-hint">— merge from JSON backup</span></label>
+        <button class="btn sm" onclick="document.getElementById('import-input').click()">↑ Import</button>
+      </div>
+      <div class="set-row">
+        <label class="set-lbl">Clear all data <span class="set-hint">— permanently deletes everything</span></label>
+        <button class="btn sm danger" onclick="clearAll()">Clear all</button>
+      </div>
+    </div>
+    <div class="set-section">
+      <div class="set-title">Account</div>
+      <div class="set-row"><label class="set-lbl">Signed in as <span class="set-hint" id="settings-email"></span></label><button class="btn sm danger" onclick="window._fbSignOut()">Sign out</button></div>
+    </div>
+    <div class="set-section">
+      <div class="set-title">Storage</div>
+      <div class="set-row"><label class="set-lbl">Cloud sync <span class="set-hint">— data syncs automatically across all your devices via Firebase</span></label></div>
+      <div class="set-row"><label class="set-lbl set-hint">${items.length} items · ${outfits.length} outfits · ${wishlist.length} wishlist · ${cats.length} categories</label></div>
+    </div>
+  `;
+}
+
+// ── CATEGORIES ────────────────────────────────────────────────────────────────
+function openAddCat() {
+  editCatId = null;
+  document.getElementById('cat-modal-title').textContent = 'Add category';
+  document.getElementById('cat-name').value = '';
+  document.getElementById('cat-icon').value = '';
+  document.getElementById('cat-del-btn').style.display = 'none';
+  openModal('cat-modal');
+}
+function openEditCat(id) {
+  editCatId = id; const c = cats.find(x=>x.id===id); if (!c) return;
+  document.getElementById('cat-modal-title').textContent = 'Edit category';
+  document.getElementById('cat-name').value = c.name;
+  document.getElementById('cat-icon').value = c.icon||'';
+  document.getElementById('cat-del-btn').style.display = '';
+  openModal('cat-modal');
+}
+async function saveCat() {
+  const name = document.getElementById('cat-name').value.trim();
+  if (!name) { showToast('Please enter a name.'); return; }
+  const cat = { id: editCatId||'cat-'+uid(), name, icon: document.getElementById('cat-icon').value.trim()||'📁' };
+  await persist('cats', cat);
+  closeModal('cat-modal'); renderSettings();
+  showToast('Category saved ✓');
+}
+async function deleteCategory() {
+  if (!editCatId || !confirm('Delete this category? Items in it will become uncategorised.')) return;
+  await persistDel('cats', editCatId);
+  for (const item of items.filter(i=>i.category===editCatId)) {
+    await persist('items', {...item, category:''});
+  }
+  closeModal('cat-modal'); renderSettings();
+  showToast('Category deleted');
+}
+
+// ── DATA I/O ──────────────────────────────────────────────────────────────────
+function exportData() {
+  const data = { version:4, exported:new Date().toISOString(), items, outfits, cats };
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `wardrobe-backup-${new Date().toISOString().split('T')[0]}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('Exported ✓');
+}
+async function importData(inp) {
+  const file = inp.files[0]; if (!file) return;
+  const text = await file.text(); let data;
+  try { data = JSON.parse(text); } catch { showToast('Invalid JSON file'); return; }
+  if (!confirm(`Import ${data.items?.length||0} items, ${data.outfits?.length||0} outfits, ${data.cats?.length||0} categories?\nThis will merge with existing data.`)) return;
+  for (const i of data.items||[])   { if (!items.find(x=>x.id===i.id))   items.push(i); }
+  for (const o of data.outfits||[]) { if (!outfits.find(x=>x.id===o.id)) outfits.push(o); }
+  for (const c of data.cats||[])    { if (!cats.find(x=>x.id===c.id))    cats.push(c); }
+  persist();
+  updateBadges(); renderCurrent();
+  showToast(`Imported ${data.items?.length||0} items ✓`);
+  inp.value = '';
+}
+function clearAll() {
+  if (!confirm('Delete ALL wardrobe data permanently? This cannot be undone.')) return;
+  items = []; outfits = [];
+  persist();
+  updateBadges(); renderCurrent();
+  showToast('All data cleared');
+}
+
+// ── MODAL / TOAST ─────────────────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.overlay').forEach(o=>o.style.display='none');
+});
+let _tt;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_tt); _tt = setTimeout(()=>el.classList.remove('show'), 2400);
+}
+
+// Boot handled by Firebase onAuthStateChanged
+</script>
+</div></div>
+</body>
+</html>
