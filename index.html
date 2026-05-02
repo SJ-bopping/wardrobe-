@@ -180,6 +180,47 @@ input[type=file]{border:none;background:none;padding:4px 0;height:auto;font-size
 .sync-dot.syncing{background:#F0A500;animation:sdpulse 1s infinite;}
 .sync-dot.error{background:#a32d2d;}
 @keyframes sdpulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* ── Mobile sidebar overlay ── */
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(26,23,5,.45);z-index:299;backdrop-filter:blur(2px);}
+.sidebar-overlay.open{display:block;}
+.hamburger{display:none;background:none;border:none;cursor:pointer;padding:8px;border-radius:var(--radius);color:var(--text);flex-shrink:0;}
+.hamburger:hover{background:var(--bg2);}
+.hamburger svg{display:block;}
+/* ── Inspiration feature ── */
+.inspo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
+.inspo-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;cursor:pointer;transition:all .14s;}
+.inspo-card:hover{box-shadow:var(--shadow);border-color:var(--border3);}
+.inspo-header{padding:14px 14px 10px;border-bottom:1px solid var(--border);}
+.inspo-title{font-size:14px;font-weight:600;margin-bottom:3px;}
+.inspo-sub{font-size:11px;color:var(--text2);}
+.inspo-items{display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px;}
+.inspo-item{display:flex;align-items:center;gap:7px;background:var(--bg2);border-radius:8px;padding:5px 8px;font-size:12px;}
+.inspo-swatch{width:20px;height:20px;border-radius:4px;flex-shrink:0;border:1px solid rgba(0,0,0,.07);}
+.inspo-footer{padding:8px 14px 12px;display:flex;gap:6px;}
+.spin-btn{animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+@media(max-width:699px){
+  .hamburger{display:flex;align-items:center;justify-content:center;}
+  .sidebar{
+    position:fixed;top:0;left:0;height:100dvh;z-index:300;
+    transform:translateX(-100%);transition:transform .25s ease;
+    box-shadow:var(--shadow-lg);
+  }
+  .sidebar.open{transform:translateX(0);}
+  .content-head{padding:18px 14px 0;}
+  .content-head-title{font-size:22px;}
+  .filter-bar{padding:0 14px 12px;gap:6px;}
+  .content{padding:0 14px 80px !important;}
+  .toast{bottom:70px;}
+  .charts{grid-template-columns:1fr;}
+}
+@media(min-width:700px){
+  .sidebar{transform:none !important;position:relative !important;}
+  .sidebar-overlay{display:none !important;}
+  .hamburger{display:none !important;}
+}
 </style>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -336,6 +377,12 @@ window.fbDel=async(col,id)=>{
     </div>
 
     <div class="nav-section">
+      <span class="nav-lbl">Organise</span>
+      <button class="nav-btn" id="nav-inspo" onclick="nav('inspo')">
+        <span class="nav-icon">✨</span>Outfit inspo
+      </button>
+    </div>
+    <div class="nav-section">
       <span class="nav-lbl">Analyse</span>
       <button class="nav-btn" id="nav-stats" onclick="nav('stats')">
         <span class="nav-icon">📊</span>Insights
@@ -361,6 +408,16 @@ window.fbDel=async(col,id)=>{
 
   <!-- MAIN -->
   <div class="main" style="background:var(--bg);overflow-y:auto;flex:1;">
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 14px 0;flex-shrink:0;" id="mobile-topbar">
+      <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <rect y="3" width="20" height="2" rx="1" fill="currentColor"/>
+          <rect y="9" width="20" height="2" rx="1" fill="currentColor"/>
+          <rect y="15" width="20" height="2" rx="1" fill="currentColor"/>
+        </svg>
+      </button>
+      <span class="serif" style="font-size:17px;font-weight:400;" id="mobile-page-title">All clothes</span>
+    </div>
     <div id="content-header"></div>
     <div id="filter-bar-wrap"></div>
     <div class="content" id="content" style="padding-top:0;">
@@ -518,6 +575,24 @@ window.fbDel=async(col,id)=>{
   </div>
 </div>
 
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<!-- INSPIRATION MODAL -->
+<div class="overlay" id="inspo-modal" style="display:none;" onclick="if(event.target===this)closeModal('inspo-modal')">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-head">
+      <h2 class="serif" style="font-size:18px;">✨ Outfit Inspiration</h2>
+      <button class="btn ghost sm" onclick="closeModal('inspo-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="inspo-body">
+    </div>
+    <div class="modal-foot">
+      <button class="btn sm" onclick="closeModal('inspo-modal')">Close</button>
+      <button class="btn sm primary" id="inspo-spin-btn" onclick="generateInspo()">🎲 Generate new</button>
+    </div>
+  </div>
+</div>
+
 <input type="file" id="import-input" accept=".json" style="display:none;" onchange="importData(this)">
 <div class="toast" id="toast"></div>
 
@@ -601,12 +676,27 @@ function updateBadges() {
 }
 function buildSidebarCats() {}
 
+// ── SIDEBAR (mobile) ──────────────────────────────────────────────────────────
+function toggleSidebar(){
+  document.querySelector('.sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+function closeSidebar(){
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
+
 // ── NAVIGATION ────────────────────────────────────────────────────────────────
 function nav(v, cat=null) {
   view = v; filterCat = cat;
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   const target = document.getElementById('nav-'+v);
   if (target) target.classList.add('active');
+  // Update mobile title
+  const titles={all:'All clothes',outfits:'Outfits',wishlist:'Wishlist',inspo:'Outfit inspo',stats:'Insights',calendar:'Wear calendar',settings:'Settings'};
+  const mt = document.getElementById('mobile-page-title');
+  if (mt) mt.textContent = cat ? (cats.find(c=>c.id===cat)||{name:'Category'}).name : (titles[v]||'Wardrobe');
+  closeSidebar();
   renderCurrent();
 }
 
@@ -614,6 +704,7 @@ function renderCurrent() {
   if (view==='all')       renderItems();
   else if (view==='outfits')   renderOutfits();
   else if (view==='wishlist')  renderWishlist();
+  else if (view==='inspo')     renderInspo();
   else if (view==='stats')     renderStats();
   else if (view==='calendar')  renderCalendar();
   else if (view==='settings')  renderSettings();
@@ -1336,6 +1427,206 @@ function showToast(msg) {
   const el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
   clearTimeout(_tt); _tt = setTimeout(()=>el.classList.remove('show'), 2400);
+}
+
+
+// ── OUTFIT INSPIRATION ────────────────────────────────────────────────────────
+const INSPO_VIBES = [
+  {name:'Casual day out',icon:'☀️',filters:{occasion:'Casual'},needs:['Tops','Bottoms','Footwear'],tip:'Keep it relaxed and effortless.'},
+  {name:'Smart casual',icon:'✨',filters:{occasion:'Smart casual'},needs:['Tops','Bottoms','Footwear','Accessories'],tip:'Elevated basics — think neat cuts and clean colours.'},
+  {name:'Office ready',icon:'💼',filters:{occasion:'Business'},needs:['Tops','Bottoms','Footwear'],tip:'Polished and professional.'},
+  {name:'Formal event',icon:'🌹',filters:{occasion:'Formal'},needs:['Dresses & Skirts','Footwear','Accessories'],tip:'Go all out — this is your moment.'},
+  {name:'Weekend vibes',icon:'🏡',filters:{},needs:['Tops','Bottoms','Footwear'],tip:'Comfort is key. Make it cosy.'},
+  {name:'Night out',icon:'🌙',filters:{},needs:['Tops','Bottoms','Footwear','Accessories'],tip:'Dress to impress. Have fun with it.'},
+  {name:'Spring walk',icon:'🌸',filters:{season:'Spring'},needs:['Tops','Outerwear','Bottoms','Footwear'],tip:'Light layers and fresh colours.'},
+  {name:'Summer look',icon:'🌊',filters:{season:'Summer'},needs:['Tops','Bottoms','Footwear','Accessories'],tip:'Light fabrics, bright colours.'},
+  {name:'Autumn cosy',icon:'🍂',filters:{season:'Autumn'},needs:['Tops','Outerwear','Bottoms','Footwear'],tip:'Warm tones and cosy layers.'},
+  {name:'Winter warmth',icon:'❄️',filters:{season:'Winter'},needs:['Tops','Outerwear','Bottoms','Footwear','Accessories'],tip:'Layer up and stay warm.'},
+  {name:'Sport & active',icon:'🏃',filters:{occasion:'Sportswear'},needs:['Tops','Bottoms','Footwear'],tip:'Built for movement.'},
+  {name:'Monochrome',icon:'🖤',filters:{},needs:['Tops','Bottoms','Footwear'],tip:'Pick one colour family and go all in.',special:'mono'},
+  {name:'Colour pop',icon:'🌈',filters:{},needs:['Tops','Bottoms','Footwear'],tip:'Mix bold colours — the more the better.',special:'colourpop'},
+  {name:'Neutrals only',icon:'🤍',filters:{},needs:['Tops','Bottoms','Footwear','Accessories'],tip:'Beige, white, brown, grey — timeless.',special:'neutral'},
+];
+
+const NEUTRAL_COLORS = ['White','Off-white','Beige','Camel','Tan','Brown','Grey','Charcoal','Black','Khaki'];
+const WARM_COLORS = ['Red','Coral','Orange','Amber','Yellow','Gold','Brown','Camel','Tan','Burgundy'];
+
+function renderInspo() {
+  document.getElementById('content-header').innerHTML = `
+    <div class="content-head">
+      <div class="content-head-title">✨ Outfit Inspo</div>
+      <div class="content-head-sub">Generated from your wardrobe</div>
+    </div>`;
+  document.getElementById('filter-bar-wrap').innerHTML = `
+    <div class="filter-bar" style="padding:0 20px 14px">
+      <button class="btn sm primary" onclick="openInspoModal()">🎲 Generate outfit</button>
+      <select class="fsel" id="inspo-vibe-filter" onchange="renderInspoGrid()">
+        <option value="">All vibes</option>
+        ${INSPO_VIBES.map(v=>`<option value="${v.name}">${v.icon} ${v.name}</option>`).join('')}
+      </select>
+    </div>`;
+  renderInspoGrid();
+}
+
+function renderInspoGrid() {
+  const vibeFilter = (document.getElementById('inspo-vibe-filter')||{}).value||'';
+  const el = document.getElementById('content');
+  if (items.length < 3) {
+    el.innerHTML = `<div class="empty"><div class="ei">👗</div><p>Add at least 3 items to your wardrobe to generate outfit ideas!</p></div>`;
+    return;
+  }
+  // Generate a few outfits for the grid
+  const vibes = vibeFilter ? INSPO_VIBES.filter(v=>v.name===vibeFilter) : shuffleArr([...INSPO_VIBES]).slice(0,6);
+  const outfitCards = vibes.map(vibe => {
+    const outfit = buildOutfit(vibe);
+    if (!outfit) return null;
+    return renderInspoCard(vibe, outfit);
+  }).filter(Boolean);
+  if (!outfitCards.length) {
+    el.innerHTML = `<div class="empty"><div class="ei">🎨</div><p>No outfits could be generated for this vibe. Try adding more items!</p></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="inspo-grid">${outfitCards.join('')}</div>`;
+}
+
+function buildOutfit(vibe) {
+  let pool = [...items];
+  // Apply season/occasion filter
+  if (vibe.filters.season) pool = pool.filter(i => i.season===vibe.filters.season||i.season==='All-season');
+  if (vibe.filters.occasion) pool = pool.filter(i => i.occasion===vibe.filters.occasion||i.occasion==='Casual');
+  // Special filters
+  if (vibe.special==='mono') {
+    const colorGroups = {};
+    pool.forEach(i=>{ if(i.color){(colorGroups[i.color]||(colorGroups[i.color]=[])).push(i);} });
+    const validColors = Object.entries(colorGroups).filter(([c,arr])=>arr.length>=2);
+    if (!validColors.length) return null;
+    const [chosenColor, colorItems] = validColors[Math.floor(Math.random()*validColors.length)];
+    pool = colorItems;
+  }
+  if (vibe.special==='neutral') pool = pool.filter(i=>NEUTRAL_COLORS.includes(i.color));
+  if (vibe.special==='colourpop') pool = pool.filter(i=>!NEUTRAL_COLORS.includes(i.color)&&i.color);
+  if (pool.length < 2) return null;
+  // Pick items by category need
+  const outfit = [];
+  const catMap = {};
+  cats.forEach(c=>{ catMap[c.name] = c.id; });
+  for (const need of vibe.needs) {
+    const catId = cats.find(c=>c.name===need||c.name.includes(need.split(' ')[0]))?.id;
+    const candidates = catId ? pool.filter(i=>i.category===catId&&!outfit.find(o=>o.id===i.id)) : pool.filter(i=>!outfit.find(o=>o.id===i.id));
+    if (candidates.length) outfit.push(candidates[Math.floor(Math.random()*candidates.length)]);
+  }
+  // Fill up to 4 items if needed
+  while (outfit.length < 2 && pool.length > outfit.length) {
+    const remaining = pool.filter(i=>!outfit.find(o=>o.id===i.id));
+    if (!remaining.length) break;
+    outfit.push(remaining[Math.floor(Math.random()*remaining.length)]);
+  }
+  return outfit.length >= 2 ? outfit : null;
+}
+
+function renderInspoCard(vibe, outfit) {
+  const itemsHtml = outfit.map(item => {
+    const h = hex(item.color); const fg = isLight(h)?'#1a1705':'#faf9f6';
+    const photos = getPhotos('items', item.id); const fp = photos[0]||null;
+    const cat = cats.find(c=>c.id===item.category)||{};
+    return `<div class="inspo-item">
+      ${fp ? `<img src="${fp}" style="width:28px;height:28px;border-radius:5px;object-fit:cover;flex-shrink:0;">` : `<div class="inspo-swatch" style="background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:11px;">${cat.icon||'👕'}</div>`}
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.name}</span>
+    </div>`;
+  }).join('');
+  const vibeEncoded = encodeURIComponent(vibe.name);
+  return `<div class="inspo-card">
+    <div class="inspo-header">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="font-size:20px;">${vibe.icon}</span>
+        <div>
+          <div class="inspo-title">${vibe.name}</div>
+          <div class="inspo-sub">${vibe.tip}</div>
+        </div>
+      </div>
+    </div>
+    <div class="inspo-items">${itemsHtml}</div>
+    <div class="inspo-footer">
+      <button class="btn sm" style="flex:1;justify-content:center;" onclick="saveInspoAsOutfit(${JSON.stringify(outfit.map(i=>i.id))}, '${vibe.icon} ${vibe.name}')">+ Save as outfit</button>
+      <button class="btn sm" onclick="reshuffleCard(this,'${vibeEncoded}')" title="Shuffle">🔀</button>
+    </div>
+  </div>`;
+}
+
+function reshuffleCard(btn, vibeEncoded) {
+  const vibeName = decodeURIComponent(vibeEncoded);
+  const vibe = INSPO_VIBES.find(v=>v.name===vibeName);
+  if (!vibe) return;
+  const card = btn.closest('.inspo-card');
+  const outfit = buildOutfit(vibe);
+  if (!outfit) { showToast('No more combinations found!'); return; }
+  card.outerHTML = renderInspoCard(vibe, outfit);
+}
+
+function openInspoModal() {
+  if (items.length < 3) { showToast('Add at least 3 items first!'); return; }
+  generateInspo();
+  openModal('inspo-modal');
+}
+
+function generateInspo() {
+  const btn = document.getElementById('inspo-spin-btn');
+  if (btn) { btn.textContent = '⏳'; btn.disabled = true; }
+  setTimeout(() => {
+    const vibe = INSPO_VIBES[Math.floor(Math.random()*INSPO_VIBES.length)];
+    const outfit = buildOutfit(vibe);
+    const body = document.getElementById('inspo-body');
+    if (!outfit) {
+      body.innerHTML = `<div class="empty"><div class="ei">🎨</div><p>Couldn't build this vibe with your current wardrobe. Try adding more items!</p></div>`;
+    } else {
+      const itemsHtml = outfit.map(item => {
+        const h = hex(item.color); const fg = isLight(h)?'#1a1705':'#faf9f6';
+        const photos = getPhotos('items', item.id); const fp = photos[0]||null;
+        const cat = cats.find(c=>c.id===item.category)||{};
+        return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
+          ${fp ? `<img src="${fp}" style="width:52px;height:52px;border-radius:8px;object-fit:cover;flex-shrink:0;">` : `<div style="width:52px;height:52px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;border:1px solid rgba(0,0,0,.07);">${cat.icon||'👕'}</div>`}
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;margin-bottom:2px;">${item.name}</div>
+            <div style="font-size:11px;color:var(--text2);">${[item.brand,item.subtype,item.color].filter(Boolean).join(' · ')||cat.name}</div>
+          </div>
+          ${item.season&&item.season!=='All-season'?`<span class="tag ts-${item.season}" style="flex-shrink:0;">${item.season}</span>`:''}
+        </div>`;
+      }).join('');
+      body.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;padding:4px 0 16px;">
+          <span style="font-size:32px;">${vibe.icon}</span>
+          <div><div style="font-family:'DM Serif Display',serif;font-size:18px;">${vibe.name}</div><div style="font-size:12px;color:var(--text2);">${vibe.tip}</div></div>
+        </div>
+        ${itemsHtml}
+        <div style="margin-top:14px;">
+          <button class="btn sm primary" onclick="saveInspoAsOutfit(${JSON.stringify(outfit.map(i=>i.id))}, '${vibe.icon} ${vibe.name}')" style="width:100%;justify-content:center;">+ Save this as an outfit</button>
+        </div>`;
+    }
+    if (btn) { btn.textContent = '🎲 Generate new'; btn.disabled = false; }
+  }, 300);
+}
+
+function saveInspoAsOutfit(itemIds, name) {
+  // Pre-fill the outfit modal with these items
+  editOutfitId = null;
+  selectedOutfitItems = new Set(itemIds);
+  pendingOutfitPhotos = [];
+  document.getElementById('outfit-modal-title').textContent = 'Save outfit';
+  document.getElementById('outfit-del-btn').style.display = 'none';
+  document.getElementById('of-name').value = name;
+  document.getElementById('of-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('of-occ').value = '';
+  document.getElementById('of-notes').value = '';
+  document.getElementById('of-photo').value = '';
+  renderOutfitPhotoPreviews();
+  buildItemPicker();
+  closeModal('inspo-modal');
+  openModal('outfit-modal');
+}
+
+function shuffleArr(arr) {
+  for (let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
+  return arr;
 }
 
 // Boot handled by Firebase onAuthStateChanged
