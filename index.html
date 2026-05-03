@@ -312,21 +312,13 @@ window.fbSave=async(col,item)=>{
   if(!_uid)return;
   setSyncDot('syncing');
   try{
-    // Strip photos arrays (too large for Firestore) - store separately in localStorage
-    const cleaned=Object.fromEntries(
-      Object.entries(item).filter(([k,v])=>v!==undefined&&v!==null||(typeof v==='number'||typeof v==='boolean'))
-        .map(([k,v])=>{
-          if(k==='photos'||k==='photo') return null; // exclude photo data
-          if(Array.isArray(v)) return [k, v.filter(x=>x!==undefined&&x!==null)];
-          return [k,v];
-        }).filter(Boolean)
-    );
-    // Store photos in localStorage by id
-    if(item.photos&&item.photos.length) localStorage.setItem('ph_'+col+'_'+item.id, JSON.stringify(item.photos));
-    else if(item.photo) localStorage.setItem('ph_'+col+'_'+item.id, JSON.stringify([item.photo]));
-    // Store first photo URL flag in firestore
-    cleaned.hasPhoto = !!(item.photos?.length||item.photo);
-    cleaned.photoCount = item.photos?.length||( item.photo?1:0);
+    // Photos are now Cloudinary URLs — safe to store directly in Firestore
+    const cleaned={};
+    for(const[k,v]of Object.entries(item)){
+      if(v===undefined||v===null)continue;
+      if(Array.isArray(v))cleaned[k]=v.filter(x=>x!==undefined&&x!==null&&x!=='');
+      else cleaned[k]=v;
+    }
     await setDoc(doc(db,'users',_uid,col,item.id),cleaned);
     setSyncDot('ok');
   }catch(e){setSyncDot('error');console.error('Firestore save error:',e);}
