@@ -654,36 +654,70 @@ function hex(name) { return (COLORS.find(c=>c.n===name)||{h:'#e0e0e0'}).h; }
 // ── CLOUDINARY CONFIG ─────────────────────────────────────────────────────
 const CLOUDINARY_CLOUD = 'dirakuvhp';
 const CLOUDINARY_PRESET = 'wardrobe';
-const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`;
+const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/' + CLOUDINARY_CLOUD + '/image/upload';
 
-// Upload a file to Cloudinary — returns a public URL (works on all devices!)
+// Upload a single file to Cloudinary — returns a public URL
 async function f2b(file) {
+  // Compress first to speed up upload
+  const compressed = await new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onerror = rej;
+    reader.onload = e => {
+      const img = new Image();
+      img.onerror = () => res(file); // fallback to original if compression fails
+      img.onload = () => {
+        try {
+          const MAX = 1200;
+          let w = img.width, h = img.height;
+          if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+          if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          canvas.toBlob(blob => res(blob || file), 'image/jpeg', 0.82);
+        } catch { res(file); }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
   const fd = new FormData();
-  fd.append('file', file);
+  fd.append('file', compressed);
   fd.append('upload_preset', CLOUDINARY_PRESET);
   fd.append('folder', 'wardrobe');
   try {
     const r = await fetch(CLOUDINARY_URL, { method: 'POST', body: fd });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
-    if (data.secure_url) return data.secure_url;
-    throw new Error(data.error?.message || 'Upload failed');
+    if (data.secure_url) {
+      console.log('✓ Cloudinary upload success:', data.secure_url);
+      return data.secure_url;
+    }
+    console.error('Cloudinary error response:', data);
+    throw new Error(data.error?.message || 'No URL returned');
   } catch(e) {
-    console.error('Cloudinary upload error:', e);
-    showToast('Photo upload failed — check connection');
+    console.error('Cloudinary upload failed:', e);
+    showToast('⚠️ Photo upload failed: ' + e.message);
     return null;
   }
 }
 
-// Upload multiple files, show progress toast
+// Upload multiple files with progress
 async function uploadPhotos(files) {
   if (!files.length) return [];
-  showToast(`Uploading ${files.length} photo${files.length>1?'s':''}...`);
+  showToast('📤 Uploading photo' + (files.length > 1 ? 's' : '') + '...');
   const urls = [];
-  for (const file of files) {
-    const url = await f2b(file);
+  for (let i = 0; i < files.length; i++) {
+    if (files.length > 1) showToast(`📤 Uploading ${i+1} of ${files.length}...`);
+    const url = await f2b(files[i]);
     if (url) urls.push(url);
   }
-  if (urls.length) showToast(`${urls.length} photo${urls.length>1?'s':''} uploaded ✓`);
+  if (urls.length === files.length) {
+    showToast('✓ Photo' + (urls.length > 1 ? 's' : '') + ' uploaded!');
+  } else if (urls.length > 0) {
+    showToast(`✓ ${urls.length} of ${files.length} photos uploaded`);
+  }
   return urls;
 }
 
@@ -944,9 +978,13 @@ function getColor() { const d=document.querySelector('.cdot.on'); return d?d.tit
 async function previewItemPhoto(inp) {
   const files = Array.from(inp.files); if (!files.length) return;
   inp.value = '';
+  // Disable save button while uploading
+  const saveBtn = document.querySelector('#item-modal .btn.sm.primary');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Uploading...'; }
   const urls = await uploadPhotos(files);
   pendingItemPhotos.push(...urls);
   renderItemPhotoPreviews();
+  if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save item'; }
 }
 function removeItemPhoto(idx) {
   pendingItemPhotos.splice(idx, 1);
@@ -1093,9 +1131,12 @@ function openEditOutfit(id) {
 async function previewOutfitPhoto(inp) {
   const files = Array.from(inp.files); if (!files.length) return;
   inp.value = '';
+  const saveBtn = document.querySelector('#outfit-modal .btn.sm.primary');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Uploading...'; }
   const urls = await uploadPhotos(files);
   pendingOutfitPhotos.push(...urls);
   renderOutfitPhotoPreviews();
+  if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save outfit'; }
 }
 function removeOutfitPhoto(idx) {
   pendingOutfitPhotos.splice(idx, 1);
