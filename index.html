@@ -608,17 +608,21 @@ function setSyncDot(s){
   d.className='sync-dot'+(s==='syncing'?' syncing':s==='error'?' error':'');
 }
 
-// Get photos for an item/outfit from localStorage (photos stored locally for performance)
+// Get photos - check item object first, then localStorage
 function getPhotos(col, id) {
+  // Check in-memory items/outfits first
+  const arr = col==='items' ? items : col==='outfits' ? outfits : [];
+  const obj = arr.find(x=>x.id===id);
+  if (obj && obj.photos && obj.photos.length) return obj.photos;
+  // Fallback to localStorage
   try { return JSON.parse(localStorage.getItem('ph_'+col+'_'+id)||'[]'); } catch { return []; }
 }
 // Hydrate photos back onto items/outfits after Firestore load
 function hydratePhotos(list, col) {
-  return list.map(item => ({
-    ...item,
-    photos: getPhotos(col, item.id),
-    photo: (getPhotos(col, item.id))[0] || null
-  }));
+  return list.map(item => {
+    const stored = (() => { try { return JSON.parse(localStorage.getItem('ph_'+col+'_'+item.id)||'[]'); } catch { return []; } })();
+    return { ...item, photos: stored, photo: stored[0]||null };
+  });
 }
 
 // ── DATA ──────────────────────────────────────────────────────────────────────
@@ -794,7 +798,8 @@ function setGridMode(m) { gridMode = m; renderCurrent(); }
 function itemListRow(item) {
   const h = hex(item.color); const fg = isLight(h)?'#1a1705':'#faf9f6';
   const cat = cats.find(c=>c.id===item.category)||{};
-  const photos = item.photos||[]; const firstPhoto = photos[0]||item.photo||null;
+  const photos = item.photos && item.photos.length ? item.photos : (()=>{try{return JSON.parse(localStorage.getItem('ph_items_'+item.id)||'[]');}catch{return [];}})();
+  const firstPhoto = photos[0]||item.photo||null;
   const thumb = firstPhoto
     ? `<div style="width:42px;height:42px;border-radius:8px;flex-shrink:0;overflow:hidden;"><img src="${firstPhoto}" style="width:100%;height:100%;object-fit:cover;"></div>`
     : `<div style="width:42px;height:42px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid rgba(0,0,0,0.07);">${cat.icon||'👕'}</div>`;
@@ -813,7 +818,7 @@ function itemListRow(item) {
 function itemCard(item) {
   const h = hex(item.color); const fg = isLight(h)?'#1a1705':'#faf9f6';
   const cat = cats.find(c=>c.id===item.category)||{};
-  const photos = item.photos||[];
+  const photos = item.photos && item.photos.length ? item.photos : (()=>{try{return JSON.parse(localStorage.getItem('ph_items_'+item.id)||'[]');}catch{return [];}})();
   const firstPhoto = photos[0] || item.photo || null;
   const tags = [];
   if (item.season && item.season!=='All-season') tags.push(`<span class="tag ts-${item.season}">${item.season}</span>`);
@@ -844,7 +849,7 @@ function openDetail(id) {
   document.getElementById('d-name').textContent = item.name;
   const sw = document.getElementById('d-swatch');
   sw.style.background = h; sw.style.color = fg; sw.textContent = cat.icon||'👕';
-  const allPhotos = item.photos||[]; if(item.photo && !allPhotos.length) allPhotos.push(item.photo);
+  const allPhotos = item.photos && item.photos.length ? item.photos : (()=>{try{return JSON.parse(localStorage.getItem('ph_items_'+item.id)||'[]');}catch{return[];}})();
   document.getElementById('d-photo').innerHTML = allPhotos.length
     ? `<div style="display:grid;grid-template-columns:${allPhotos.length>1?'1fr 1fr':'1fr'};gap:6px;margin-bottom:13px;">${allPhotos.map((p,i)=>`<img src="${p}" style="width:100%;border-radius:8px;${i===0&&allPhotos.length===1?'max-height:240px;':'height:120px;'};object-fit:cover;">`).join('')}</div>` : '';
   const rows = [
@@ -885,7 +890,10 @@ function openAddItem(id=null) {
   document.getElementById('f-season').value = item?.season || 'All-season';
   document.getElementById('f-occ').value    = item?.occasion || 'Casual';
   document.getElementById('f-cond').value   = item?.condition || 'New';
-  pendingItemPhotos = [...(item?.photos||[])]; if(item?.photo && !pendingItemPhotos.length) pendingItemPhotos.push(item.photo);
+  // Load existing photos from item object or localStorage
+  const existingPhotos = item?.photos && item.photos.length ? item.photos : 
+    (()=>{try{return JSON.parse(localStorage.getItem('ph_items_'+(item?.id||''))||'[]');}catch{return[];}})();
+  pendingItemPhotos = [...existingPhotos];
   document.getElementById('f-photo').value = '';
   renderItemPhotoPreviews();
   buildColorPicker(item?.color || null);
@@ -1000,7 +1008,7 @@ function renderOutfits() {
 
 function outfitCard(o) {
   const tagged = (o.items||[]).map(id=>items.find(i=>i.id===id)).filter(Boolean);
-  const allPhotos = o.photos||[]; if(o.photo && !allPhotos.length) allPhotos.push(o.photo);
+  const allPhotos = o.photos && o.photos.length ? o.photos : (()=>{try{return JSON.parse(localStorage.getItem('ph_outfits_'+o.id)||'[]');}catch{return [];}})();
   const firstPhoto = allPhotos[0]||null;
   const dots = tagged.slice(0,7).map(t=>{
     const h=hex(t.color);
@@ -1037,7 +1045,9 @@ function openAddOutfit() {
 function openEditOutfit(id) {
   const o = outfits.find(x=>x.id===id); if (!o) return;
   editOutfitId = id; selectedOutfitItems = new Set(o.items||[]);
-  pendingOutfitPhotos = [...(o.photos||[])]; if(o.photo && !pendingOutfitPhotos.length) pendingOutfitPhotos.push(o.photo);
+  const existingOutfitPhotos = o.photos && o.photos.length ? o.photos :
+    (()=>{try{return JSON.parse(localStorage.getItem('ph_outfits_'+o.id)||'[]');}catch{return[];}})();
+  pendingOutfitPhotos = [...existingOutfitPhotos];
   document.getElementById('outfit-modal-title').textContent = 'Edit outfit';
   document.getElementById('outfit-del-btn').style.display = '';
   document.getElementById('of-name').value  = o.name;
