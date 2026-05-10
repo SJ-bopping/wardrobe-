@@ -700,13 +700,14 @@ function rIdeas(){
       <div class="cp">
         <div class="cn">${idea.name}</div>
         <div class="cs">${tagged.length?tagged.map(t=>t.name).join(', '):'No items yet'}</div>
-        <div class="tgs">${idea.occasion?`<span class="tg">${idea.occasion}</span>`:''}${idea.season?`<span class="tg">${idea.season}</span>`:''}</div>
+        <div class="tgs" style="margin-bottom:${idea.notes?'6px':'0'}">${idea.occasion?`<span class="tg">${idea.occasion}</span>`:''}${idea.season?`<span class="tg">${idea.season}</span>`:''}</div>
+        ${idea.notes?`<div style="font-size:11px;color:var(--text2);line-height:1.6;white-space:pre-line">${idea.notes}</div>`:''}
       </div>
     </div>`;
   }).join('')}</div>`);
 }
 
-function openAddIdea(id=null,preIds=[]){
+function openAddIdea(id=null,preIds=[],preTips=''){
   eIdeaId=id;
   const idea=id?ideas.find(x=>x.id===id):null;
   ideaSel=new Set(idea?.items||preIds);
@@ -719,7 +720,7 @@ function openAddIdea(id=null,preIds=[]){
         <div class="fr"><label>Occasion</label><select class="sel" id="id-occ"><option value="">—</option><option>Everyday</option><option>Work</option><option>Date night</option><option>Party</option><option>Wedding</option><option>Travel</option><option>Sport</option><option>Special event</option></select></div>
         <div class="fr"><label>Season</label><select class="sel" id="id-sea"><option value="">—</option><option>Spring</option><option>Summer</option><option>Autumn</option><option>Winter</option><option>All-season</option></select></div>
       </div>
-      <div class="fr"><label>Notes</label><textarea class="txa" id="id-notes" placeholder="Styling tips, where to wear this...">${idea?.notes||''}</textarea></div>
+      <div class="fr"><label>Notes</label><textarea class="txa" id="id-notes" placeholder="Styling tips, where to wear this...">${idea?.notes||preTips||''}</textarea></div>
       <div class="fr"><label>Pick items from your wardrobe</label>
         <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
           <input type="text" class="inp" id="id-search" placeholder="Search items..." oninput="buildIdeaPicker()" style="flex:1;min-width:120px;height:34px;">
@@ -782,7 +783,7 @@ function saveIdea(){
 }
 function delIdea(){if(!eIdeaId||!confirm('Delete this idea?'))return;const id=eIdeaId;ideas=ideas.filter(x=>x.id!==id);cm('idea-modal');updateBadges();renderCurrent();showToast('Deleted');persistDel('ideas',id);}
 
-// ── OUTFIT INSPO ──────────────────────────────────────────────────────────────
+// ── OUTFIT INSPO ─────────────────────────────────────────────────────────────
 const TOP_TYPES=['Tops','T-shirt','Top','Shirt','Blouse','Sweater','Cardigan','Hoodie','Crop top','Tank top','Tube top','Corset top'];
 const BOT_TYPES=['Jeans','Trousers','Pant','Shorts','Skirt','Leggings','Cycling shorts','Mini skirt','Midi skirt','Maxi skirt'];
 const OUT_TYPES=['Jacket','Coat','Blazer','Gilet','Trench coat','Puffer jacket','Leather jacket'];
@@ -790,19 +791,75 @@ const DRS_TYPES=['Dress','Mini dress','Midi dress','Maxi dress','Jumpsuit','Co-o
 const SHO_TYPES=['Sneakers','Boots','Ankle boots','Heels','Sandals','Loafers','Flats','Slippers','Mules','Platform shoes'];
 const ACC_TYPES=['Belt','Hat','Cap','Beanie','Scarf','Bag','Handbag','Tote bag','Backpack','Sunglasses','Jewellery','Necklace','Watch'];
 
+const STYLES=[
+  {id:'my',label:'✨ My style',desc:'Outfits tailored to what you already own',palette:null,tips:['Combine your most-worn items in new ways','Try pairing items from different categories','Use accessories to elevate basics','Let colour be your guide — build around one hero piece'],names:['Effortless look','Weekend ready','Day-to-night','Elevated basics','Fresh take','Off-duty']},
+  {id:'minimal',label:'🤍 Minimalist',desc:'Clean lines, neutral tones, less is more',palette:['White','Off-white','Black','Grey','Beige','Camel','Cream','Ivory','Charcoal','Light grey','Silver'],tips:['Stick to a max of 2-3 colours per outfit','Let fit and fabric do all the talking','One statement piece — rest kept simple','Tuck in tops for a cleaner silhouette','Avoid prints — texture is your friend'],names:['Quiet confidence','Clean slate','Monochrome moment','Neutral grounds','Effortless minimal']},
+  {id:'streetwear',label:'🧢 Streetwear',desc:'Urban, bold, oversized, expressive',palette:['Black','White','Grey','Navy','Olive','Khaki'],tips:['Layer oversized pieces over fitted ones','Mix athletic and casual pieces freely','Bold graphics as the focal point','Chunky shoes complete the look','Backwards caps or beanies add edge'],names:['Off duty','Street level','Urban uniform','Block party','City moves']},
+  {id:'coastal',label:'🌊 Coastal grandmother',desc:'Relaxed, breezy, linen & light tones',palette:['White','Beige','Sand','Sky blue','Light blue','Baby blue','Lemon','Mint','Powder blue','Cream','Ivory'],tips:['Light breathable fabrics like linen and cotton','Relaxed fits — nothing too structured','Roll up sleeves and hems for that lived-in look','Wicker bags and simple sandals are perfect','Natural textures and sun-bleached tones'],names:['Sunday morning','Coastal drift','Harbour days','Linen season','Breezy afternoon']},
+  {id:'coquette',label:'🎀 Coquette',desc:'Feminine, soft, bows, blush & lace vibes',palette:['Blush','Baby pink','White','Lavender','Dusty rose','Rose','Lilac','Mauve','Ivory','Periwinkle'],tips:['Add a bow or ribbon as your focal point','Layer delicate jewellery — rings and necklaces','Soft feminine silhouettes — nothing sharp or boxy','Ballet flats or kitten heels elevate any look','Carry a dainty bag to complete the aesthetic'],names:['Soft focus','Ballet core','Pink fantasy','Darling look','Sugar rush']},
+  {id:'oldmoney',label:'💎 Old money',desc:'Timeless, tailored, quiet luxury',palette:['Navy','Camel','Cream','Beige','Brown','White','Tan','Khaki','Gold','Chocolate'],tips:['Quality over quantity — keep it classic','Tailored fits — nothing sloppy or too relaxed','Understated colours with zero loud logos','Gold jewellery adds that finishing touch','Loafers or clean leather shoes are key'],names:['Heritage look','Polo club','Quiet luxury','Club classic','Understated wealth']},
+  {id:'downtown',label:'🏙️ Downtown girl',desc:'Cool, effortless, NYC energy — leather & coffee',palette:['Black','Brown','Camel','Tan','White','Grey','Chocolate','Burgundy'],tips:['Leather pieces are your best friend','Oversized blazer over everything','Simple basics elevated with great accessories','Coffee-toned neutrals feel very downtown','Combat boots or loafers finish the look'],names:['Downtown mood','Coffee run','East side','City girl','Concrete jungle']},
+  {id:'urbancore',label:'🔩 Urbancore',desc:'Industrial, functional, techwear-influenced',palette:['Black','Charcoal','Grey','Olive','Khaki','Silver'],tips:['Functional pieces — cargo, utility pockets','Monochromatic dark outfits feel very urbancore','Layer different textures like nylon and cotton','Chunky functional shoes work perfectly','Minimise colour — let silhouette do the work'],names:['City infrastructure','Functional fit','Urban grid','Concrete wave','System override']},
+  {id:'stargirl',label:'⭐ Stargirl',desc:'Dreamy, celestial, sparkle and wonder',palette:['Silver','Gold','Lavender','Baby blue','White','Lilac','Periwinkle','Pink'],tips:['Add shimmer or metallic details wherever possible','Layer delicate star and moon jewellery','Floaty feminine pieces feel very stargirl','Glitter or sparkle in accessories counts','Dreamy pastels mixed with silver are perfect'],names:['Celestial moment','Star light','Moon child','Galaxy glow','Shooting star']},
+  {id:'messyitgirl',label:'💋 Messy it girl',desc:'Effortlessly undone, cool-girl energy',palette:['Black','White','Grey','Denim','Brown','Burgundy','Red'],tips:['Nothing should look too perfect or planned','Oversized with something fitted underneath','Tuck in casually — not perfectly','Messy bun or undone hair completes the look','One bold piece makes it feel intentional'],names:['Undone chic','Cool girl','Accidental outfit','Too cool','Off the cuff']},
+  {id:'romantic',label:'📖 Romantic academia',desc:'Literary, romantic, soft and scholarly',palette:['Brown','Camel','Cream','Burgundy','Dusty rose','Olive','Mauve','Tan'],tips:['Layer a knit or cardigan over everything','Mix florals with plaid or checks','Carry a tote or structured bag','Book-ish accessories — scarves, glasses','Vintage-inspired silhouettes feel perfect'],names:['Library hours','Soft study','Chapter one','Candlelight','Garden party']},
+  {id:'y2k',label:'⭐ Y2K',desc:'Bold colours, low rise, futuristic vibes',palette:['Pink','Hot pink','Silver','Baby blue','Purple','Yellow','Fuchsia','Turquoise'],tips:['Low-rise and crop combinations are classic Y2K','Mix metallics with bright colours freely','Accessories are everything — go bold','Butterfly clips and chunky jewellery work perfectly','Tinted sunglasses complete any Y2K look'],names:['2004 throwback','Pop princess','Cyber babe','Digital age','Glitter era']},
+  {id:'boho',label:'🌿 Boho',desc:'Flowy, earthy, layered & free-spirited',palette:['Brown','Tan','Rust','Olive','Terracotta','Cream','Mustard','Apricot'],tips:['Layer loose flowy pieces freely','Mix textures — knits, linen, suede, fringe','Earthy tones with natural woven accessories','Stack multiple bracelets and rings','Long skirts or wide trousers feel very boho'],names:['Free spirit','Earth child','Festival mood','Wild garden','Wanderer']},
+  {id:'dark',label:'🖤 Dark academia',desc:'Moody, scholarly, plaid & deep tones',palette:['Black','Charcoal','Brown','Burgundy','Navy','Olive','Mocha','Chocolate'],tips:['Layer structured pieces like blazers and vests','Mix plaids, tweeds and cable knits','Deep jewel tones work together perfectly','Carry a structured leather bag','Chelsea boots or loafers are the shoe'],names:['Study hall','Autumn library','Candlewick','Midnight scholar','Gothic garden']},
+  {id:'sporty',label:'🏃 Sporty chic',desc:'Athletic meets elevated, effortless cool',palette:['Black','White','Grey','Navy','Olive'],tips:['Mix athletic pieces with tailored ones','Monochrome sporty looks feel very elevated','Clean trainers tie the whole look together','A structured bag balances the athletic pieces','Sleek ponytail or slicked-back hair finishes it'],names:['Active energy','Court side','Track to table','Sport luxe','Game day']},
+  {id:'preppy',label:'🎓 Preppy',desc:'Polished, classic, collegiate energy',palette:['Navy','White','Red','Green','Yellow','Camel','Burgundy'],tips:['Always tuck in your top','Layer a knit over a collared shirt','Classic accessories — loafers, belts, structured bags','Pleated trousers and tailored blazers feel very preppy','Stripe or check patterns work perfectly'],names:['Class photo','Campus style','Ivy league','Weekend club','Academic chic']},
+  {id:'vintage',label:'🕰️ Vintage',desc:'Retro-inspired, thrifted, nostalgic charm',palette:['Brown','Tan','Rust','Mustard','Olive','Burgundy','Terracotta','Mocha'],tips:['Mix vintage pieces with modern basics','Let one vintage hero piece lead the look','Thrifted textures add authentic character','High waisted everything feels vintage','Vintage accessories finish it off perfectly'],names:['Retro Sunday','Thrift find','Past perfect','Nostalgia trip','Vintage chapter']},
+];
+
+let inspoTab='shuffle', inspoStyle='my', inspoLoading=false;
+
 function rInspo(){
-  sCH(`<div class="ch"><div class="cht">Outfit inspo</div><div class="chs">Generated from your wardrobe</div></div>`);
-  sFB(`<div class="fb">
-    <button class="btn sm pr" onclick="genInspos()">🎲 Shuffle all</button>
-    <select class="fsel" id="inspo-sea" onchange="genInspos()"><option value="">Any season</option><option>Spring</option><option>Summer</option><option>Autumn</option><option>Winter</option></select>
-    <select class="fsel" id="inspo-sty" onchange="genInspos()"><option value="">Any style</option><option>Casual</option><option>Smart casual</option><option>Business</option><option>Formal</option><option>Sportswear</option></select>
-  </div>`);
-  if(items.length<2){sCt(`<div class="empty"><div class="ei">👗</div><p>Add at least 2 items to generate outfits!</p></div>`);return;}
-  genInspos();
+  sCH(`<div class="ch"><div class="cht">✨ Outfit inspo</div><div class="chs">Style suggestions from your wardrobe</div></div>`);
+  sFB('');
+  if(items.length<2){sCt(`<div class="empty"><div class="ei">👗</div><p>Add at least 2 items to get outfit suggestions!</p></div>`);return;}
+
+  // Tab bar
+  const tabHtml=`<div style="display:flex;gap:0;border-bottom:2px solid var(--border2);margin-bottom:20px">
+    <button onclick="switchInspoTab('shuffle')" id="tab-shuffle" style="padding:10px 20px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:600;color:${inspoTab==='shuffle'?'var(--accent)':'var(--text3)'};border-bottom:${inspoTab==='shuffle'?'2px solid var(--accent)':'2px solid transparent'};margin-bottom:-2px;transition:all .12s">🎲 Quick shuffle</button>
+    <button onclick="switchInspoTab('ai')" id="tab-ai" style="padding:10px 20px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:600;color:${inspoTab==='ai'?'var(--accent)':'var(--text3)'};border-bottom:${inspoTab==='ai'?'2px solid var(--accent)':'2px solid transparent'};margin-bottom:-2px;transition:all .12s">✨ Style aesthetics</button>
+  </div>`;
+
+  sCt(tabHtml + '<div id="inspo-tab-content"></div>');
+  renderInspoTab();
 }
 
-function getPool(){
-  const sea=gv('inspo-sea'),sty=gv('inspo-sty');
+function switchInspoTab(tab){
+  inspoTab=tab;
+  // Update tab styles
+  const tabs={shuffle:'tab-shuffle',ai:'tab-ai'};
+  Object.entries(tabs).forEach(([key,id])=>{
+    const el=gi(id);if(!el)return;
+    const active=key===tab;
+    el.style.color=active?'var(--accent)':'var(--text3)';
+    el.style.borderBottom=active?'2px solid var(--accent)':'2px solid transparent';
+  });
+  renderInspoTab();
+}
+
+function renderInspoTab(){
+  const el=gi('inspo-tab-content');if(!el)return;
+  if(inspoTab==='shuffle') renderShuffleTab(el);
+  else renderAITab(el);
+}
+
+// ── TAB 1: QUICK SHUFFLE ──────────────────────────────────────────────────────
+function renderShuffleTab(el){
+  el.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
+    <button class="btn sm pr" onclick="genShuffle()">🎲 Shuffle all</button>
+    <select class="fsel" id="sh-sea" onchange="genShuffle()" style="height:34px"><option value="">Any season</option><option>Spring</option><option>Summer</option><option>Autumn</option><option>Winter</option></select>
+    <select class="fsel" id="sh-sty" onchange="genShuffle()" style="height:34px"><option value="">Any style</option><option>Casual</option><option>Smart casual</option><option>Business</option><option>Formal</option><option>Sportswear</option></select>
+  </div>
+  <div id="shuffle-results"></div>`;
+  genShuffle();
+}
+
+function getShufflePool(){
+  const sea=gv('sh-sea'),sty=gv('sh-sty');
   let pool=items.filter(i=>{
     if(sea&&i.season!==sea&&i.season!=='All-season')return false;
     if(sty&&i.occasion!==sty)return false;
@@ -832,45 +889,314 @@ function buildOutfit(pool,existing=[]){
   return outfit;
 }
 
-function inspoCard(outfit,idx){
-  const itemsHtml=outfit.map(item=>{
-    const h=hx(item.color),fg=isLight(h)?'#1a1705':'#faf9f6',cat=cats.find(c=>c.id===item.category)||{};
-    const fp=(item.photos||[])[0]||null;
-    return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-      ${fp?`<img src="${fp}" style="width:44px;height:44px;border-radius:8px;object-fit:cover;flex-shrink:0">`:`<div style="width:44px;height:44px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid rgba(0,0,0,.07)">${cat.icon||'👕'}</div>`}
-      <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}</div><div style="font-size:11px;color:var(--text2)">${[item.brand,item.subtype].filter(Boolean).join(' · ')||'—'}</div></div>
-    </div>`;
-  }).join('');
-  const idStr=outfit.map(i=>i.id).join('|');
-  return`<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
-    <div style="padding:14px 14px 0"><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">OUTFIT ${idx+1}</div>${itemsHtml}</div>
-    <div style="display:flex;gap:6px;padding:10px 14px">
-      <button class="btn sm pr" style="flex:1;justify-content:center" data-ids="${idStr}" onclick="saveToIdeas(this.dataset.ids)">+ Save to Outfit ideas</button>
-      <button class="btn sm" data-ids="${idStr}" onclick="reshuffleCard(this)" title="Reshuffle">🔀</button>
+function shuffleItemCard(item){
+  const fp=(item.photos||[])[0]||null;
+  const h=hx(item.color),fg=isLight(h)?'#1a1705':'#faf9f6';
+  const cat=cats.find(c=>c.id===item.category)||{};
+  return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+    ${fp?`<img src="${fp}" style="width:44px;height:44px;border-radius:8px;object-fit:cover;flex-shrink:0">`:`<div style="width:44px;height:44px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid rgba(0,0,0,.07)">${cat.icon||'👕'}</div>`}
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}</div>
+      <div style="font-size:11px;color:var(--text2)">${[item.brand,item.subtype].filter(Boolean).join(' · ')||'—'}</div>
     </div>
   </div>`;
 }
 
-function genInspos(){
-  const pool=getPool();const existing=[];const cards=[];
-  for(let i=0;i<6;i++){const o=buildOutfit(pool,existing);if(o){existing.push(o);cards.push(inspoCard(o,i));}}
-  if(!cards.length){sCt(`<div class="empty"><div class="ei">🎨</div><p>Couldn't generate outfits. Add more items!</p></div>`);return;}
-  sCt(`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">${cards.join('')}</div>`);
+function genShuffle(){
+  const pool=getShufflePool(),existing=[],cards=[];
+  for(let i=0;i<6;i++){const o=buildOutfit(pool,existing);if(o){existing.push(o);cards.push(o);}}
+  const el=gi('shuffle-results');if(!el)return;
+  if(!cards.length){el.innerHTML=`<div class="empty"><div class="ei">🎨</div><p>Couldn't generate outfits. Add more items!</p></div>`;return;}
+  el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">${cards.map((outfit,i)=>{
+    const idStr=outfit.map(x=>x.id).join('|');
+    return`<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
+      <div style="padding:14px 14px 0">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">OUTFIT ${i+1}</div>
+        ${outfit.map(shuffleItemCard).join('')}
+      </div>
+      <div style="display:flex;gap:6px;padding:10px 14px">
+        <button class="btn sm pr" style="flex:1;justify-content:center" data-ids="${idStr}" onclick="saveToIdeas(this.dataset.ids)">+ Save to Outfit ideas</button>
+        <button class="btn sm" onclick="reshuffleOne(this)" data-idx="${i}" title="Reshuffle">🔀</button>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
 }
 
-function reshuffleCard(btn){
-  const card=btn.closest('div[style*="border:1px solid var(--border)"]');
-  const pool=getPool();const o=buildOutfit(pool,[]);
+function reshuffleOne(btn){
+  const card=btn.closest('div[style*="background:var(--bg)"]');
+  const pool=getShufflePool();
+  const o=buildOutfit(pool,[]);
   if(!o){showToast('No more combinations!');return;}
-  const idx=card.querySelector('[style*="OUTFIT"]')?.textContent?.match(/\d+/)?.[0]||'';
-  const tmp=document.createElement('div');tmp.innerHTML=inspoCard(o,idx);
+  const idStr=o.map(x=>x.id).join('|');
+  const tmp=document.createElement('div');
+  const idx=btn.dataset.idx||'';
+  tmp.innerHTML=`<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
+    <div style="padding:14px 14px 0">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">OUTFIT ${idx}</div>
+      ${o.map(shuffleItemCard).join('')}
+    </div>
+    <div style="display:flex;gap:6px;padding:10px 14px">
+      <button class="btn sm pr" style="flex:1;justify-content:center" data-ids="${idStr}" onclick="saveToIdeas(this.dataset.ids)">+ Save to Outfit ideas</button>
+      <button class="btn sm" onclick="reshuffleOne(this)" data-idx="${idx}" title="Reshuffle">🔀</button>
+    </div>
+  </div>`;
   card.replaceWith(tmp.firstElementChild);
 }
 
-function saveToIdeas(idStr){
+// ── TAB 2: STYLE AESTHETICS ───────────────────────────────────────────────────
+function renderAITab(el){
+  const pillsHtml=STYLES.map(s=>`<button onclick="selectStyle('${s.id}')" id="style-pill-${s.id}" style="padding:8px 14px;border-radius:99px;border:1px solid var(--border2);background:${inspoStyle===s.id?'var(--accent)':'var(--bg)'};color:${inspoStyle===s.id?'var(--afg)':'var(--text2)'};cursor:pointer;font-size:13px;white-space:nowrap;transition:all .12s;font-family:'DM Sans',sans-serif">${s.label}</button>`).join('');
+  const curStyle=STYLES.find(s=>s.id===inspoStyle)||STYLES[0];
+  el.innerHTML=`
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">${pillsHtml}</div>
+    <div id="style-desc" style="font-size:13px;color:var(--text2);margin-bottom:16px;padding:10px 14px;background:var(--bg2);border-radius:var(--r)">${curStyle.desc}</div>
+    <button class="btn pr" onclick="genStyleOutfits()" id="ai-gen-btn" style="width:100%;justify-content:center;height:42px;font-size:14px;margin-bottom:20px">✨ Generate outfit suggestions</button>
+    <div id="ai-results"></div>`;
+}
+
+function selectStyle(id){
+  inspoStyle=id;
+  document.querySelectorAll('[id^="style-pill-"]').forEach(el=>{
+    const active=el.id===`style-pill-${id}`;
+    el.style.background=active?'var(--accent)':'var(--bg)';
+    el.style.color=active?'var(--afg)':'var(--text2)';
+  });
+  const desc=gi('style-desc');
+  if(desc)desc.textContent=STYLES.find(s=>s.id===id)?.desc||'';
+  gi('ai-results').innerHTML='';
+}
+
+// Per-item styling advice based on what's in the outfit
+function getOutfitTip(outfit, styleInfo){
+  const types=outfit.map(i=>i.subtype||'');
+  const colors=outfit.map(i=>i.color||'').filter(Boolean);
+  const brands=outfit.map(i=>i.brand||'').filter(Boolean);
+  const hasTop=types.some(t=>TOP_TYPES.includes(t));
+  const hasBot=types.some(t=>BOT_TYPES.includes(t));
+  const hasOuter=types.some(t=>OUT_TYPES.includes(t));
+  const hasDress=types.some(t=>DRS_TYPES.includes(t));
+  const hasShoe=types.some(t=>SHO_TYPES.includes(t));
+  const hasAcc=types.some(t=>ACC_TYPES.includes(t));
+  const uniqueColors=[...new Set(colors)];
+  const isMonochrome=uniqueColors.length===1;
+  const colorStr=uniqueColors.slice(0,2).join(' and ');
+  const sid=styleInfo.id;
+
+  const tips=[];
+
+  // Outfit-specific structural tips
+  if(hasTop&&hasBot&&!hasOuter){
+    const tuckedStyles=['minimal','oldmoney','preppy','romantic'];
+    if(tuckedStyles.includes(sid))tips.push('Tuck your top fully for a polished, put-together finish');
+    else if(sid==='messyitgirl')tips.push('Half-tuck your top — intentionally undone is the vibe');
+    else if(sid==='streetwear'||sid==='urbancore')tips.push('Leave your top untucked and let it hang loose');
+    else tips.push('Try a half-tuck to break up the silhouette');
+  }
+  if(hasOuter){
+    if(sid==='downtown'||sid==='messyitgirl')tips.push('Leave the outer layer open and slightly pushed off the shoulders');
+    else if(sid==='oldmoney'||sid==='preppy')tips.push('Button up the outer layer — clean and structured wins here');
+    else if(sid==='dark'||sid==='romantic')tips.push('Layer the outer piece over a shirt collar peeking out at the neck');
+    else tips.push('Try wearing it open over the outfit for an effortless layer');
+  }
+  if(hasDress&&!hasOuter){
+    if(sid==='coquette'||sid==='stargirl')tips.push('Add a thin belt at the waist to define your silhouette');
+    else if(sid==='boho')tips.push('Add a wide braided belt to break up the flow');
+    else tips.push('Keep accessories minimal — let the dress lead');
+  }
+
+  // Colour-specific tips
+  if(isMonochrome&&uniqueColors[0]){
+    tips.push(`Full ${colors[0]} works — vary the textures to keep it interesting`);
+  } else if(uniqueColors.length>=2){
+    const dark=['Black','Charcoal','Navy','Burgundy','Brown','Dark green'];
+    const light=['White','Cream','Beige','Ivory','Off-white'];
+    const hasDark=uniqueColors.some(c=>dark.includes(c));
+    const hasLight=uniqueColors.some(c=>light.includes(c));
+    if(hasDark&&hasLight)tips.push(`The ${colorStr} contrast is strong — keep accessories in one of these tones`);
+    else tips.push(`${colorStr} complement each other well — lean into the combination`);
+  }
+
+  // Footwear tips
+  if(hasShoe){
+    const shoe=outfit.find(i=>SHO_TYPES.includes(i.subtype||''));
+    if(shoe){
+      if(['Sneakers'].includes(shoe.subtype)&&(sid==='oldmoney'||sid==='preppy'))tips.push(`Swap the sneakers for loafers or clean leather shoes to fully nail the ${styleInfo.label.replace(/[^\w\s]/g,'').trim()} look`);
+      else if(['Heels'].includes(shoe.subtype)&&sid==='streetwear')tips.push('Heels with streetwear is a power move — keep the rest of the outfit relaxed');
+      else if(['Boots','Ankle boots'].includes(shoe.subtype))tips.push('Boots ground the whole outfit — tuck trousers in or roll them up to show them off');
+    }
+  } else {
+    // Missing shoes suggestion
+    const shoeSuggestions={minimal:'Clean white trainers or simple ballet flats',oldmoney:'Loafers or leather Oxford shoes',streetwear:'Chunky trainers or high-top sneakers',coquette:'Ballet flats or strappy kitten heels',dark:'Chelsea boots or chunky platform boots',downtown:'Combat boots or pointed-toe ankle boots',boho:'Strappy sandals or tan ankle boots',stargirl:'Silver sandals or sparkly flats',romantic:'Mary Janes or block-heeled boots',messyitgirl:'Beat-up trainers or simple ankle boots',coastal:'White sandals or espadrilles'};
+    const sug=shoeSuggestions[sid]||'Shoes that match your colour palette';
+    tips.push(`Complete the look with: ${sug}`);
+  }
+
+  // Accessories tip
+  if(!hasAcc){
+    const accSuggestions={minimal:'One simple gold ring or stud earrings — nothing more',oldmoney:'A structured leather bag and a watch',coquette:'A bow hair clip and a dainty necklace',stargirl:'Star or moon jewellery layered together',dark:'A structured leather satchel or canvas tote',downtown:'A shoulder bag and simple gold hoops',boho:'Stacked bracelets and a woven bag',y2k:'Chunky colourful jewellery and a mini bag',preppy:'A belt and a structured handbag',romantic:'A delicate necklace and a tote bag',streetwear:'A cap or beanie and a crossbody bag'};
+    const sug=accSuggestions[sid]||'An accessory to tie the look together';
+    tips.push(`Accessories to add: ${sug}`);
+  }
+
+  // Return 2 most relevant tips
+  return tips.slice(0,2);
+}
+
+function genStyleOutfits(){
+  const styleInfo=STYLES.find(s=>s.id===inspoStyle)||STYLES[0];
+  const results=gi('ai-results');if(!results)return;
+
+  // Smart item filtering: palette + fit + subtype preferences per style
+  const STYLE_PREFS={
+    minimal:{subtypes:[...TOP_TYPES,...BOT_TYPES,...SHO_TYPES],avoidSubtypes:['Joggers','Sweatpants','Sweatshirt','Hoodie'],avoidColors:['Multicolor','Tie-dye','Animal print']},
+    streetwear:{subtypes:[...TOP_TYPES,'Joggers','Sweatpants','Sweatshirt',...BOT_TYPES,...OUT_TYPES,...SHO_TYPES],avoidSubtypes:['Heels','Flats'],preferFits:['Oversized','Baggy','Loose']},
+    coastal:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...SHO_TYPES,...ACC_TYPES],avoidColors:['Black','Charcoal','Burgundy','Maroon']},
+    coquette:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...ACC_TYPES],preferSubtypes:['Dress','Midi dress','Mini dress','Skirt','Midi skirt','Blouse','Top'],avoidSubtypes:['Hoodie','Joggers','Sweatpants','Sneakers']},
+    oldmoney:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...OUT_TYPES,...SHO_TYPES],preferSubtypes:['Blazer','Trousers','Shirt','Blouse','Loafers','Coat'],avoidSubtypes:['Joggers','Sweatpants','Hoodie','Sneakers'],preferFits:['Fitted','Regular','Tailored']},
+    downtown:{subtypes:[...TOP_TYPES,...BOT_TYPES,...OUT_TYPES,...SHO_TYPES,...ACC_TYPES],preferSubtypes:['Leather jacket','Blazer','Trousers','Boots','Ankle boots'],avoidColors:['Pink','Baby pink','Blush','Lavender','Lilac']},
+    urbancore:{subtypes:[...TOP_TYPES,...BOT_TYPES,...OUT_TYPES,...SHO_TYPES],preferSubtypes:['Cargo','Joggers','Trousers','Jacket','Coat'],avoidColors:['Pink','Blush','Lavender','Yellow','Coral'],preferColors:['Black','Charcoal','Grey','Olive','Khaki']},
+    stargirl:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...ACC_TYPES,...SHO_TYPES],preferColors:['Silver','Gold','Lavender','Baby blue','White','Lilac','Pink'],avoidSubtypes:['Hoodie','Joggers','Sweatpants']},
+    messyitgirl:{subtypes:[...TOP_TYPES,...BOT_TYPES,...OUT_TYPES,...SHO_TYPES],preferFits:['Oversized','Loose','Relaxed'],avoidColors:['Blush','Lavender','Baby pink']},
+    romantic:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...OUT_TYPES,...ACC_TYPES],preferSubtypes:['Cardigan','Blouse','Skirt','Midi skirt','Dress','Midi dress','Coat'],avoidSubtypes:['Hoodie','Joggers','Sweatpants','Sneakers'],avoidColors:['Black','Charcoal']},
+    y2k:{subtypes:[...TOP_TYPES,...BOT_TYPES,...ACC_TYPES,...SHO_TYPES],preferSubtypes:['Crop top','Skirt','Mini skirt','Top'],preferColors:['Pink','Hot pink','Silver','Baby blue','Purple','Yellow','Fuchsia']},
+    boho:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...ACC_TYPES,...SHO_TYPES],preferSubtypes:['Maxi skirt','Midi skirt','Dress','Maxi dress','Blouse','Top'],avoidSubtypes:['Blazer','Suit','Joggers'],preferColors:['Brown','Tan','Rust','Olive','Terracotta','Cream','Mustard']},
+    dark:{subtypes:[...TOP_TYPES,...BOT_TYPES,...OUT_TYPES,...SHO_TYPES,...ACC_TYPES],preferSubtypes:['Blazer','Coat','Trousers','Boots'],preferColors:['Black','Charcoal','Brown','Burgundy','Navy','Olive'],avoidColors:['Pink','Yellow','Coral','Peach','Baby blue']},
+    sporty:{subtypes:[...TOP_TYPES,...BOT_TYPES,...SHO_TYPES],preferSubtypes:['Joggers','Leggings','Cycling shorts','Sneakers','Hoodie','Sweatshirt'],preferColors:['Black','White','Grey','Navy']},
+    preppy:{subtypes:[...TOP_TYPES,...BOT_TYPES,...OUT_TYPES,...SHO_TYPES,...ACC_TYPES],preferSubtypes:['Shirt','Blazer','Trousers','Loafers','Cardigan'],avoidSubtypes:['Joggers','Sweatpants','Hoodie']},
+    vintage:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...ACC_TYPES,...SHO_TYPES],preferColors:['Brown','Tan','Rust','Mustard','Olive','Burgundy','Terracotta'],avoidColors:['Neon','Silver','Gold']},
+    my:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...OUT_TYPES,...SHO_TYPES,...ACC_TYPES]},
+  };
+
+  const prefs=STYLE_PREFS[styleInfo.id]||STYLE_PREFS.my;
+  const paletteColors=styleInfo.palette;
+
+  function scoreItem(item){
+    let score=0;
+    // Palette match
+    if(paletteColors&&item.color&&paletteColors.includes(item.color))score+=3;
+    if(prefs.preferColors&&item.color&&prefs.preferColors.includes(item.color))score+=2;
+    if(prefs.avoidColors&&item.color&&prefs.avoidColors.includes(item.color))score-=4;
+    // Subtype match
+    if(prefs.preferSubtypes&&item.subtype&&prefs.preferSubtypes.includes(item.subtype))score+=3;
+    if(prefs.avoidSubtypes&&item.subtype&&prefs.avoidSubtypes.includes(item.subtype))score-=4;
+    // Fit match
+    if(prefs.preferFits&&item.fit&&prefs.preferFits.includes(item.fit))score+=2;
+    return score;
+  }
+
+  // Filter to items that score >= 0 for this style
+  let styleItems=items.filter(i=>{
+    if(prefs.subtypes&&i.subtype&&!prefs.subtypes.includes(i.subtype))return false;
+    return scoreItem(i)>=0;
+  }).sort((a,b)=>scoreItem(b)-scoreItem(a));
+
+  // Fallback if too few items
+  if(styleItems.length<3)styleItems=[...items].sort((a,b)=>scoreItem(b)-scoreItem(a));
+
+  const pick=arr=>arr.length?arr[Math.floor(Math.random()*arr.length)]:null;
+  const pickBest=arr=>{
+    // Weighted pick — higher scoring items more likely
+    if(!arr.length)return null;
+    const scored=arr.map(i=>({item:i,score:scoreItem(i)+Math.random()*2})).sort((a,b)=>b.score-a.score);
+    return scored[0].item;
+  };
+
+  const tops=styleItems.filter(i=>TOP_TYPES.includes(i.subtype||''));
+  const bots=styleItems.filter(i=>BOT_TYPES.includes(i.subtype||''));
+  const outs=styleItems.filter(i=>OUT_TYPES.includes(i.subtype||''));
+  const drss=styleItems.filter(i=>DRS_TYPES.includes(i.subtype||''));
+  const shoe=styleItems.filter(i=>SHO_TYPES.includes(i.subtype||''));
+  const accs=styleItems.filter(i=>ACC_TYPES.includes(i.subtype||''));
+
+  const usedIds=new Set();
+  const outfits=[];
+  for(let attempt=0;attempt<8&&outfits.length<3;attempt++){
+    const outfit=[];
+    const avail=arr=>arr.filter(i=>!usedIds.has(i.id));
+
+    if(avail(drss).length&&(styleInfo.id==='coquette'||styleInfo.id==='boho'||styleInfo.id==='romantic')&&Math.random()>0.4){
+      const d=pickBest(avail(drss));if(d)outfit.push(d);
+    } else if(avail(drss).length&&Math.random()>0.65){
+      const d=pickBest(avail(drss));if(d)outfit.push(d);
+    } else {
+      const t=pickBest(avail(tops));if(t)outfit.push(t);
+      const b=pickBest(avail(bots));if(b&&!outfit.find(x=>x.id===b.id))outfit.push(b);
+    }
+    if(!outfit.length)continue;
+
+    // Outerwear: more likely for dark, old money, downtown, romantic
+    const outerChance={'dark':0.7,'oldmoney':0.6,'downtown':0.65,'romantic':0.55,'preppy':0.6}[styleInfo.id]||0.35;
+    if(avail(outs).length&&Math.random()<outerChance){
+      const o=pickBest(avail(outs));if(o&&!outfit.find(x=>x.id===o.id))outfit.push(o);
+    }
+    if(avail(shoe).length){const s=pickBest(avail(shoe));if(s&&!outfit.find(x=>x.id===s.id))outfit.push(s);}
+
+    // Accessories: more for coquette, boho, stargirl, y2k
+    const accChance={'coquette':0.8,'boho':0.75,'stargirl':0.8,'y2k':0.75,'oldmoney':0.65,'preppy':0.6}[styleInfo.id]||0.4;
+    if(avail(accs).length&&Math.random()<accChance){
+      const a=pickBest(avail(accs));if(a&&!outfit.find(x=>x.id===a.id))outfit.push(a);
+    }
+
+    if(outfit.length>=2){
+      outfits.push(outfit);
+      outfit.forEach(i=>usedIds.add(i.id));
+    }
+  }
+
+  if(!outfits.length){
+    results.innerHTML=`<div class="empty"><div class="ei">🎨</div><p>Not enough ${styleInfo.label} items in your wardrobe yet. Add more items or try another style!</p></div>`;
+    return;
+  }
+
+  const names=styleInfo.names||['Look 1','Look 2','Look 3'];
+
+  // General style advice shown once at the top
+  const generalTipsHtml=styleInfo.tips.slice(0,3).map(t=>`<div style="display:flex;gap:8px;margin-bottom:4px"><span style="color:var(--accent);flex-shrink:0">•</span><span style="font-size:12px;color:var(--text2);line-height:1.5">${t}</span></div>`).join('');
+
+  results.innerHTML=`
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">🔑 ${styleInfo.label} style guide</div>
+      ${generalTipsHtml}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px">
+      ${outfits.map((outfit,i)=>{
+        const idStr=outfit.map(x=>x.id).join('|');
+        const outfitTips=getOutfitTip(outfit,styleInfo);
+        const itemsHtml=outfit.map(item=>{
+          const fp=(item.photos||[])[0]||null;
+          const h=hx(item.color),fg=isLight(h)?'#1a1705':'#faf9f6';
+          const cat=cats.find(c=>c.id===item.category)||{};
+          const matchScore=scoreItem(item);
+          return`<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--border)">
+            ${fp?`<img src="${fp}" style="width:42px;height:42px;border-radius:7px;object-fit:cover;flex-shrink:0">`:`<div style="width:42px;height:42px;border-radius:7px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;border:1px solid rgba(0,0,0,.07)">${cat.icon||'👕'}</div>`}
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}</div>
+              <div style="font-size:10px;color:${matchScore>=3?'#3B9E57':matchScore>=1?'#C9A72A':'var(--text3)'};font-weight:600">${matchScore>=3?'✓ Great match':matchScore>=1?'〜 Works well':'Added for variety'}</div>
+            </div>
+          </div>`;
+        }).join('');
+        const outfitTipsHtml=outfitTips.map(t=>`<div style="display:flex;gap:7px;margin-bottom:4px"><span style="color:var(--accent);flex-shrink:0;font-size:11px">→</span><span style="font-size:12px;color:var(--text2);line-height:1.5">${t}</span></div>`).join('');
+        return`<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
+          <div style="padding:14px 14px 0">
+            <div style="font-family:'DM Serif Display',serif;font-size:16px;margin-bottom:2px">${names[i]||'Look '+(i+1)}</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:10px">${styleInfo.label}</div>
+            ${itemsHtml}
+            ${outfitTipsHtml?`<div style="padding:10px;background:var(--bg2);border-radius:var(--r);margin:10px 0">${outfitTipsHtml}</div>`:''}
+          </div>
+          <div style="display:flex;gap:6px;padding:10px 14px">
+            <button class="btn sm pr" style="flex:1;justify-content:center" data-ids="${idStr}" data-tips="${encodeURIComponent(outfitTips.join('\n'))}" onclick="saveToIdeas(this.dataset.ids,this.dataset.tips)">+ Save to ideas</button>
+            <button class="btn sm" onclick="genStyleOutfits()" title="Regenerate all">🔀</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function saveToIdeas(idStr, tipsStr=''){
   const preIds=idStr.split('|').filter(Boolean);
+  const preTips=tipsStr?decodeURIComponent(tipsStr):'';
   nav('ideas');
-  setTimeout(()=>openAddIdea(null,preIds),100);
+  setTimeout(()=>openAddIdea(null,preIds,preTips),100);
 }
 
 // ── CALENDAR ──────────────────────────────────────────────────────────────────
