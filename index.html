@@ -333,16 +333,60 @@ let ideaSel=new Set();
 const DEFAULT_CATS=[{id:'cat-tops',name:'Tops',icon:'👕'},{id:'cat-bottoms',name:'Bottoms',icon:'👖'},{id:'cat-dresses',name:'Dresses & Skirts',icon:'👗'},{id:'cat-outer',name:'Outerwear',icon:'🧥'},{id:'cat-shoes',name:'Footwear',icon:'👟'},{id:'cat-acc',name:'Accessories',icon:'👜'},{id:'cat-sport',name:'Sportswear',icon:'🏃'},{id:'cat-other',name:'Other',icon:'🏷️'}];
 
 const COLORS=[
-  {n:'White',h:'#FFFFFF'},{n:'Off-white',h:'#FAF7F0'},{n:'Ivory',h:'#FFFFF0'},{n:'Cream',h:'#FFFDD0'},
-  {n:'Black',h:'#1a1a1a'},{n:'Charcoal',h:'#4a4a4a'},{n:'Grey',h:'#9E9E9E'},{n:'Light grey',h:'#D3D3D3'},{n:'Silver',h:'#C0C0C0'},
-  {n:'Navy',h:'#1B3A6B'},{n:'Cobalt blue',h:'#0047AB'},{n:'Blue',h:'#2196F3'},{n:'Royal blue',h:'#4169E1'},{n:'Baby blue',h:'#89CFF0'},{n:'Light blue',h:'#90CAF9'},{n:'Sky blue',h:'#B3E5FC'},{n:'Denim',h:'#1560BD'},{n:'Powder blue',h:'#B0E0E6'},{n:'Teal',h:'#00796B'},{n:'Cyan',h:'#00BCD4'},{n:'Turquoise',h:'#40E0D0'},
-  {n:'Green',h:'#388E3C'},{n:'Forest green',h:'#228B22'},{n:'Emerald',h:'#50C878'},{n:'Sage',h:'#8FAF8F'},{n:'Olive',h:'#827717'},{n:'Lime',h:'#8BC34A'},{n:'Mint',h:'#B2DFDB'},{n:'Pistachio',h:'#93C572'},{n:'Hunter green',h:'#355E3B'},
-  {n:'Khaki',h:'#C8B560'},{n:'Beige',h:'#D7C4A3'},{n:'Sand',h:'#C2B280'},{n:'Camel',h:'#C19A6B'},{n:'Tan',h:'#D2B48C'},{n:'Latte',h:'#C4A882'},{n:'Brown',h:'#795548'},{n:'Chocolate',h:'#7B3F00'},{n:'Mocha',h:'#6F4E37'},{n:'Rust',h:'#B7410E'},{n:'Terracotta',h:'#E2725B'},
-  {n:'Burgundy',h:'#7B1829'},{n:'Wine',h:'#722F37'},{n:'Maroon',h:'#800000'},{n:'Red',h:'#D32F2F'},{n:'Cherry red',h:'#990000'},{n:'Tomato',h:'#FF6347'},{n:'Coral',h:'#FF7043'},{n:'Salmon',h:'#FA8072'},
-  {n:'Hot pink',h:'#FF69B4'},{n:'Pink',h:'#E91E63'},{n:'Baby pink',h:'#FFB6C1'},{n:'Blush',h:'#F4A6B0'},{n:'Rose',h:'#E8A0A8'},{n:'Dusty rose',h:'#DCAE96'},{n:'Mauve',h:'#B07898'},{n:'Fuchsia',h:'#FF00FF'},
-  {n:'Purple',h:'#7B1FA2'},{n:'Violet',h:'#8F00FF'},{n:'Plum',h:'#8E4585'},{n:'Lavender',h:'#B39DDB'},{n:'Lilac',h:'#DDA0DD'},{n:'Periwinkle',h:'#CCCCFF'},
-  {n:'Yellow',h:'#FBC02D'},{n:'Lemon',h:'#FFF44F'},{n:'Mustard',h:'#FFDB58'},{n:'Gold',h:'#C9A72A'},{n:'Amber',h:'#FFA000'},{n:'Orange',h:'#F57C00'},{n:'Peach',h:'#FFCBA4'},{n:'Apricot',h:'#FBCEB1'},
-  {n:'Multicolor',h:'linear-gradient(135deg,#f00,#ff0,#0f0,#00f)'},{n:'Tie-dye',h:'linear-gradient(135deg,#f00,#ff69b4,#00f,#0f0)'},{n:'Animal print',h:'repeating-linear-gradient(45deg,#8B4513 0,#8B4513 4px,#D2B48C 4px,#D2B48C 10px)'},
+  // Whites & Neutrals
+  {n:'White',h:'#FFFFFF'},{n:'Warm white',h:'#FDF5E6'},{n:'Off-white',h:'#FAF7F0'},{n:'Ivory',h:'#FFFFF0'},
+  {n:'Cream',h:'#FFFDD0'},{n:'Ecru',h:'#C2B280'},{n:'Oatmeal',h:'#E8DCC8'},{n:'Parchment',h:'#F1E9D2'},
+  // Greys & Blacks
+  {n:'Black',h:'#1a1a1a'},{n:'Washed black',h:'#3D3D3D'},{n:'Charcoal',h:'#4a4a4a'},{n:'Slate',h:'#708090'},
+  {n:'Pewter',h:'#8D9091'},{n:'Grey',h:'#9E9E9E'},{n:'Light grey',h:'#D3D3D3'},{n:'Silver',h:'#C0C0C0'},
+  // Blues
+  {n:'Midnight blue',h:'#191970'},{n:'Navy',h:'#1B3A6B'},{n:'Indigo',h:'#3F51B5'},{n:'Cobalt blue',h:'#0047AB'},
+  {n:'Royal blue',h:'#4169E1'},{n:'Blue',h:'#2196F3'},{n:'Steel blue',h:'#4682B4'},{n:'Aegean blue',h:'#005778'},
+  {n:'Cornflower blue',h:'#6495ED'},{n:'Denim',h:'#1560BD'},{n:'Periwinkle',h:'#CCCCFF'},
+  {n:'Baby blue',h:'#89CFF0'},{n:'Ice blue',h:'#D6EAF8'},{n:'Light blue',h:'#90CAF9'},
+  {n:'Sky blue',h:'#B3E5FC'},{n:'Powder blue',h:'#B0E0E6'},{n:'Teal',h:'#00796B'},{n:'Cyan',h:'#00BCD4'},{n:'Turquoise',h:'#40E0D0'},
+  // Greens
+  {n:'Bottle green',h:'#006A4E'},{n:'Hunter green',h:'#355E3B'},{n:'Forest green',h:'#228B22'},
+  {n:'Emerald',h:'#50C878'},{n:'Jade',h:'#00A86B'},{n:'Green',h:'#388E3C'},{n:'Moss',h:'#8A9A5B'},
+  {n:'Fern',h:'#4F7942'},{n:'Eucalyptus',h:'#44D7A8'},{n:'Sage',h:'#8FAF8F'},{n:'Seafoam',h:'#93E9BE'},
+  {n:'Olive',h:'#827717'},{n:'Khaki green',h:'#6B7C3A'},{n:'Lime',h:'#8BC34A'},{n:'Chartreuse',h:'#7FFF00'},
+  {n:'Mint',h:'#B2DFDB'},{n:'Pistachio',h:'#93C572'},
+  // Browns & Nudes
+  {n:'Khaki',h:'#C8B560'},{n:'Wheat',h:'#F5DEB3'},{n:'Nude beige',h:'#E8C9A0'},{n:'Beige',h:'#D7C4A3'},
+  {n:'Sand',h:'#C2B280'},{n:'Stone',h:'#B2A491'},{n:'Camel',h:'#C19A6B'},{n:'Tan',h:'#D2B48C'},
+  {n:'Driftwood',h:'#AF9076'},{n:'Latte',h:'#C4A882'},{n:'Toffee',h:'#8B6343'},{n:'Hazelnut',h:'#9B6B3A'},
+  {n:'Cognac',h:'#9A463D'},{n:'Walnut',h:'#5C4033'},{n:'Brown',h:'#795548'},{n:'Chocolate',h:'#7B3F00'},
+  {n:'Mocha',h:'#6F4E37'},{n:'Rust',h:'#B7410E'},{n:'Terracotta',h:'#E2725B'},{n:'Cinnamon',h:'#D2691E'},
+  {n:'Burnt sienna',h:'#E97451'},{n:'Paprika',h:'#8D1F0A'},
+  // Reds
+  {n:'Burgundy',h:'#7B1829'},{n:'Wine',h:'#722F37'},{n:'Maroon',h:'#800000'},{n:'Ruby',h:'#9B111E'},
+  {n:'Scarlet',h:'#FF2400'},{n:'Red',h:'#D32F2F'},{n:'Cherry red',h:'#990000'},{n:'Brick',h:'#9C4221'},
+  {n:'Tomato',h:'#FF6347'},{n:'Coral',h:'#FF7043'},{n:'Salmon',h:'#FA8072'},
+  // Pinks
+  {n:'Deep fuchsia',h:'#C71585'},{n:'Raspberry',h:'#E30B5D'},{n:'Hot pink',h:'#FF69B4'},
+  {n:'Fuchsia',h:'#FF00FF'},{n:'Flamingo',h:'#FC8EAC'},{n:'Pink',h:'#E91E63'},
+  {n:'Candy pink',h:'#FF87AB'},{n:'Rose gold',h:'#B76E79'},{n:'Baby pink',h:'#FFB6C1'},
+  {n:'Blush',h:'#F4A6B0'},{n:'Rose',h:'#E8A0A8'},{n:'Dusty rose',h:'#DCAE96'},{n:'Mauve',h:'#B07898'},
+  // Purples
+  {n:'Dark purple',h:'#4A0072'},{n:'Purple',h:'#7B1FA2'},{n:'Byzantium',h:'#702963'},
+  {n:'Plum',h:'#8E4585'},{n:'Mulberry',h:'#C54B8C'},{n:'Amethyst',h:'#9966CC'},
+  {n:'Violet',h:'#8F00FF'},{n:'Heather',h:'#B69FC1'},{n:'Lavender',h:'#B39DDB'},
+  {n:'Wisteria',h:'#C9A0DC'},{n:'Lilac',h:'#DDA0DD'},
+  // Yellows & Oranges
+  {n:'Saffron',h:'#F4C430'},{n:'Yellow',h:'#FBC02D'},{n:'Sunshine',h:'#FFD300'},
+  {n:'Butter yellow',h:'#FFFD74'},{n:'Lemon',h:'#FFF44F'},{n:'Mustard',h:'#FFDB58'},
+  {n:'Gold',h:'#C9A72A'},{n:'Amber',h:'#FFA000'},{n:'Tangerine',h:'#F28500'},
+  {n:'Orange',h:'#F57C00'},{n:'Peach',h:'#FFCBA4'},{n:'Apricot',h:'#FBCEB1'},
+  // Specials & Prints
+  {n:'Multicolor',h:'linear-gradient(135deg,#f00,#ff0,#0f0,#00f)'},
+  {n:'Tie-dye',h:'linear-gradient(135deg,#f00,#ff69b4,#00f,#0f0)'},
+  {n:'Animal print',h:'repeating-linear-gradient(45deg,#8B4513 0,#8B4513 4px,#D2B48C 4px,#D2B48C 10px)'},
+  {n:'Iridescent',h:'linear-gradient(135deg,#ff69b4,#87ceeb,#98fb98,#ffd700,#ff69b4)'},
+  {n:'Denim wash',h:'linear-gradient(135deg,#1560BD,#4682B4,#89CFF0)'},
+  {n:'Plaid',h:'repeating-linear-gradient(90deg,#8B0000 0,#8B0000 4px,transparent 4px,transparent 20px),repeating-linear-gradient(0deg,#8B0000 0,#8B0000 4px,#1a1a1a 4px,#1a1a1a 20px)'},
+  {n:'Striped',h:'repeating-linear-gradient(90deg,#1a1a1a 0,#1a1a1a 5px,#fff 5px,#fff 10px)'},
+  {n:'Floral print',h:'linear-gradient(135deg,#ffb6c1,#90ee90,#87ceeb,#fffacd)'},
+  {n:'Snakeskin print',h:'repeating-linear-gradient(45deg,#8D7B6A 0,#8D7B6A 3px,#C4A882 3px,#C4A882 8px)'},
 ];
 
 function gi(id){return document.getElementById(id);}
@@ -483,13 +527,14 @@ function openAddItem(id=null){
       <div class="g2">
         <div class="fr"><label>Type</label>
           <select class="sel" id="f-subtype">
-            <optgroup label="Tops"><option>Tops</option><option>T-shirt</option><option>Top</option><option>Shirt</option><option>Blouse</option><option>Sweater</option><option>Cardigan</option><option>Hoodie</option><option>Crop top</option><option>Tank top</option><option>Tube top</option><option>Corset top</option><option>Lace top</option><option>Fishnet top</option></optgroup>
-            <optgroup label="Outerwear"><option>Jacket</option><option>Coat</option><option>Blazer</option><option>Gilet</option><option>Trench coat</option><option>Puffer jacket</option><option>Leather jacket</option></optgroup>
-            <optgroup label="Bottoms"><option>Jeans</option><option>Trousers</option><option>Pant</option><option>Shorts</option><option>Skirt</option><option>Leggings</option><option>Cycling shorts</option><option>Mini skirt</option><option>Midi skirt</option><option>Maxi skirt</option></optgroup>
-            <optgroup label="Full outfit"><option>Dress</option><option>Mini dress</option><option>Midi dress</option><option>Maxi dress</option><option>Jumpsuit</option><option>Suit</option><option>Co-ord set</option><option>Two-piece set</option></optgroup>
-            <optgroup label="Loungewear &amp; Sleepwear"><option>Pajamas</option><option>Loungewear set</option><option>Robe</option><option>Sweatpants</option><option>Sweatshirt</option><option>Joggers</option></optgroup>
+            <optgroup label="Tops"><option>Tops</option><option>T-shirt</option><option>Top</option><option>Shirt</option><option>Oxford shirt</option><option>Polo shirt</option><option>Henley</option><option>Blouse</option><option>Sweater</option><option>Cardigan</option><option>Hoodie</option><option>Crop top</option><option>Tank top</option><option>Cami</option><option>Sleeveless top</option><option>Tube top</option><option>Corset top</option><option>Lace top</option><option>Fishnet top</option><option>Off-shoulder top</option><option>Wrap top</option><option>Halter top</option><option>Bodysuit</option></optgroup>
+            <optgroup label="Outerwear"><option>Jacket</option><option>Coat</option><option>Blazer</option><option>Gilet</option><option>Trench coat</option><option>Puffer jacket</option><option>Leather jacket</option><option>Bomber jacket</option><option>Denim jacket</option><option>Windbreaker</option><option>Raincoat</option><option>Fur coat</option><option>Shearling jacket</option><option>Wax jacket</option><option>Cape</option><option>Poncho</option></optgroup>
+            <optgroup label="Bottoms"><option>Jeans</option><option>Straight jeans</option><option>Flared jeans</option><option>Skinny jeans</option><option>Trousers</option><option>Wide-leg trousers</option><option>Linen trousers</option><option>Paperbag trousers</option><option>Cargo pants</option><option>Pant</option><option>Shorts</option><option>Mini shorts</option><option>Bermuda shorts</option><option>Culotte</option><option>Skirt</option><option>Leggings</option><option>Cycling shorts</option><option>Mini skirt</option><option>Midi skirt</option><option>Maxi skirt</option></optgroup>
+            <optgroup label="Full outfit"><option>Dress</option><option>Mini dress</option><option>Midi dress</option><option>Maxi dress</option><option>Bodycon dress</option><option>Wrap dress</option><option>Slip dress</option><option>Shirt dress</option><option>Babydoll dress</option><option>Smock dress</option><option>Jumpsuit</option><option>Playsuit</option><option>Romper</option><option>Suit</option><option>Co-ord set</option><option>Two-piece set</option></optgroup>
+            <optgroup label="Loungewear &amp; Sleepwear"><option>Pajamas</option><option>Loungewear set</option><option>Shorts set</option><option>Robe</option><option>Nightgown</option><option>Slip</option><option>Onesie</option><option>Thermal set</option><option>Sweatpants</option><option>Sweatshirt</option><option>Joggers</option></optgroup>
             <optgroup label="Footwear"><option>Sneakers</option><option>Boots</option><option>Ankle boots</option><option>Heels</option><option>Sandals</option><option>Loafers</option><option>Flats</option><option>Slippers</option><option>Mules</option><option>Platform shoes</option></optgroup>
-            <optgroup label="Accessories"><option>Belt</option><option>Hat</option><option>Cap</option><option>Beanie</option><option>Scarf</option><option>Bag</option><option>Handbag</option><option>Tote bag</option><option>Backpack</option><option>Sunglasses</option><option>Jewellery</option><option>Necklace</option><option>Earrings</option><option>Bracelet</option><option>Ring</option><option>Watch</option><option>Hair accessory</option><option>Gloves</option></optgroup>
+            <optgroup label="Accessories"><option>Belt</option><option>Hat</option><option>Cap</option><option>Beanie</option><option>Beret</option><option>Bucket hat</option><option>Headband</option><option>Hair scarf</option><option>Bandana</option><option>Scarf</option><option>Bag</option><option>Handbag</option><option>Tote bag</option><option>Backpack</option><option>Clutch</option><option>Crossbody bag</option><option>Shoulder bag</option><option>Mini bag</option><option>Sunglasses</option><option>Jewellery</option><option>Necklace</option><option>Choker</option><option>Earrings</option><option>Bracelet</option><option>Anklet</option><option>Ring</option><option>Brooch</option><option>Watch</option><option>Hair accessory</option><option>Gloves</option></optgroup>
+            <optgroup label="Hosiery"><option>Tights</option><option>Knee-high socks</option><option>Ankle socks</option><option>Leg warmers</option></optgroup>
             <optgroup label="Other"><option>Underwear</option><option>Bra</option><option>Socks</option><option>Swimwear</option><option>Bikini</option><option>One-piece</option><option>Other</option></optgroup>
           </select>
         </div>
