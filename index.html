@@ -86,9 +86,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);}
 .fbs{position:relative;flex-shrink:0;flex-grow:0;}
 .fbs input{padding:0 12px 0 32px;height:34px;border-radius:99px;font-size:13px;width:175px;}
 .fbs::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:11px;pointer-events:none;}
-.fsel{height:34px;padding:0 26px 0 11px;border-radius:99px;font-size:12px;border:1px solid var(--border2);background:var(--bg);color:var(--text2);appearance:none;-webkit-appearance:none;cursor:pointer;flex-shrink:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23a39e8e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;}
+.fsel{height:28px;padding:0 20px 0 8px;border-radius:99px;font-size:11px;border:1px solid var(--border2);background:var(--bg);color:var(--text2);appearance:none;-webkit-appearance:none;cursor:pointer;flex-shrink:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23a39e8e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center;}
 .vt{display:flex;gap:2px;flex-shrink:0;}
-.vb{width:34px;height:34px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg);color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.vb{width:28px;height:28px;border-radius:var(--r);border:1px solid var(--border2);background:var(--bg);color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
 .vb.active{background:var(--accent);color:var(--afg);border-color:transparent;}
 #content{padding:0 20px 80px;}
 /* BUTTONS */
@@ -521,7 +521,7 @@ function rItems(){
   const usedGroups=COLOR_GROUPS.filter(g=>g.colors.some(c=>itemColors.includes(c)));
   sCH(`<div class="ch"><div class="cht">All clothes</div><div class="chs">${list.length} of ${items.length} item${items.length!==1?'s':''}</div></div>`);
   sFB(`<div class="fb">
-    <div class="fbs"><input type="text" id="isrch" placeholder="Search..." value="${sr.replace(/"/g,'&quot;')}" oninput="rItems()"></div>
+    <div class="fbs"><input type="text" id="isrch" placeholder="Search..." value="${sr.replace(/"/g,'&quot;')}" oninput="rItems()" style="height:28px;font-size:11px;padding:0 10px 0 28px"></div>
     <select class="fsel" id="ftyp" onchange="rItems()"><option value="">All types</option>${typs.map(t=>`<option ${tf===t?'selected':''}>${t}</option>`).join('')}</select>
     <select class="fsel" id="fcolg" onchange="rColSub()" style="min-width:110px"><option value="">All colours</option>${usedGroups.map(g=>`<option ${cfg===g.g?'selected':''}>${g.g}</option>`).join('')}</select>
     <select class="fsel" id="fcol" onchange="rItems()" style="min-width:110px"><option value="">Any shade</option>${colsInGroup.map(c=>`<option ${cf===c?'selected':''}>${c}</option>`).join('')}</select>
@@ -531,7 +531,7 @@ function rItems(){
     <select class="fsel" id="fcat" onchange="rItems()"><option value="">All categories</option>${cats.map(c=>`<option value="${c.id}" ${catf===c.id?'selected':''}>${c.name}</option>`).join('')}</select>
     <select class="fsel" id="fsort" onchange="rItems()">${[['name','Name A–Z'],['brand','Brand'],['color','Color'],['season','Season'],['worn','Most worn'],['newest','Newest']].map(([v,l])=>`<option value="${v}" ${so===v?'selected':''}>${l}</option>`).join('')}</select>
     <div class="vt"><button class="vb ${gmode==='grid'?'active':''}" onclick="setGM('grid')">⊞</button><button class="vb ${gmode==='list'?'active':''}" onclick="setGM('list')">☰</button></div>
-    <button class="btn sm pr" onclick="openAddItem()">+ Add</button>
+    <button class="btn sm pr" onclick="openAddItem()" style="height:28px;font-size:11px;padding:0 10px">+ Add</button>
   </div>`);
   if(!list.length){sCt(`<div class="empty"><div class="ei">👗</div><p>${items.length?'No items match.':'Add your first item!'}</p></div>`);return;}
   sCt(gmode==='list'?`<div style="display:flex;flex-direction:column;gap:6px">${list.map(iLR).join('')}</div>`:`<div class="grid">${list.map(iCard).join('')}</div>`);
@@ -606,7 +606,7 @@ function openAddItem(id=null){
             <optgroup label="Footwear"><option>Sneakers</option><option>Boots</option><option>Ankle boots</option><option>Heels</option><option>Sandals</option><option>Loafers</option><option>Flats</option><option>Slippers</option><option>Mules</option><option>Platform shoes</option></optgroup>
             <optgroup label="Hats"><option>Hat</option><option>Cap</option><option>Beanie</option><option>Beret</option><option>Bucket hat</option><option>Headband</option><option>Hair scarf</option><option>Bandana</option><option>Hair accessory</option></optgroup>
             <optgroup label="Bags"><option>Bag</option><option>Handbag</option><option>Tote bag</option><option>Backpack</option><option>Clutch</option><option>Crossbody bag</option><option>Shoulder bag</option><option>Mini bag</option></optgroup>
-            <optgroup label="Jewellery"><option>Jewellery</option><option>Necklace</option><option>Choker</option><option>Earrings</option><option>Bracelet</option><option>Anklet</option><option>Ring</option><option>Brooch</option><option>Watch</option></optgroup>
+            <optgroup label="Jewellery"><option>Jewellery</option><option>Necklace</option><option>Chain necklace</option><option>Pearl necklace</option><option>Pendant</option><option>Locket</option><option>Choker</option><option>Earrings</option><option>Stud earrings</option><option>Hoop earrings</option><option>Drop earrings</option><option>Dangle earrings</option><option>Ear cuff</option><option>Bracelet</option><option>Anklet</option><option>Anklet chain</option><option>Body chain</option><option>Ring</option><option>Signet ring</option><option>Cocktail ring</option><option>Brooch</option><option>Brooch pin</option><option>Hair clip</option><option>Hair pin</option><option>Barrette</option><option>Scrunchie</option><option>Watch</option></optgroup>
             <optgroup label="Other accessories"><option>Belt</option><option>Scarf</option><option>Sunglasses</option><option>Gloves</option></optgroup>
             <optgroup label="Hosiery"><option>Tights</option><option>Knee-high socks</option><option>Ankle socks</option><option>Leg warmers</option></optgroup>
             <optgroup label="Other"><option>Underwear</option><option>Bra</option><option>Socks</option><option>Swimwear</option><option>Bikini</option><option>One-piece</option><option>Other</option></optgroup>
