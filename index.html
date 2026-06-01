@@ -77,13 +77,13 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);}
 .sf{margin-top:auto;padding:10px 8px;border-top:1px solid var(--border);}
 /* MAIN */
 .main{flex:1;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;min-width:0;}
-.mscroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.mscroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
 .ch{padding:24px 20px 0;}
 .cht{font-family:'DM Serif Display',serif;font-size:26px;letter-spacing:-.02em;margin-bottom:3px;}
 .chs{font-size:12px;color:var(--text3);margin-bottom:16px;}
-.fb{display:flex;gap:8px;flex-wrap:nowrap;align-items:center;padding:0 20px 14px;overflow-x:auto;scrollbar-width:none;}
+.fb{display:flex;gap:8px;flex-wrap:nowrap;align-items:center;padding:0 20px 14px;min-width:max-content;}.fb::-webkit-scrollbar{display:none;}#fb::-webkit-scrollbar{height:3px;}#fb::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:99px;}#fb::-webkit-scrollbar-track{background:transparent;}
 .fb::-webkit-scrollbar{display:none;}
-.fbs{position:relative;flex-shrink:0;}
+.fbs{position:relative;flex-shrink:0;flex-grow:0;}
 .fbs input{padding:0 12px 0 32px;height:34px;border-radius:99px;font-size:13px;width:175px;}
 .fbs::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:11px;pointer-events:none;}
 .fsel{height:34px;padding:0 26px 0 11px;border-radius:99px;font-size:12px;border:1px solid var(--border2);background:var(--bg);color:var(--text2);appearance:none;-webkit-appearance:none;cursor:pointer;flex-shrink:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23a39e8e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;}
@@ -277,7 +277,7 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
         <span style="font-family:'DM Serif Display',serif;font-size:17px;" id="mtitle">All clothes</span>
       </div>
       <div id="ch"></div>
-      <div id="fb"></div>
+      <div id="fb" style="overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;scrollbar-width:thin;padding-bottom:16px;margin-bottom:8px;"></div>
       <div id="content"></div>
     </div>
   </div>
@@ -333,61 +333,120 @@ let ideaSel=new Set();
 const DEFAULT_CATS=[{id:'cat-tops',name:'Tops',icon:'👕'},{id:'cat-bottoms',name:'Bottoms',icon:'👖'},{id:'cat-dresses',name:'Dresses & Skirts',icon:'👗'},{id:'cat-outer',name:'Outerwear',icon:'🧥'},{id:'cat-shoes',name:'Footwear',icon:'👟'},{id:'cat-acc',name:'Accessories',icon:'👜'},{id:'cat-sport',name:'Sportswear',icon:'🏃'},{id:'cat-other',name:'Other',icon:'🏷️'}];
 
 const COLORS=[
-  // Whites & Neutrals
-  {n:'White',h:'#FFFFFF'},{n:'Warm white',h:'#FDF5E6'},{n:'Off-white',h:'#FAF7F0'},{n:'Ivory',h:'#FFFFF0'},
-  {n:'Cream',h:'#FFFDD0'},{n:'Ecru',h:'#C2B280'},{n:'Oatmeal',h:'#E8DCC8'},{n:'Parchment',h:'#F1E9D2'},
-  // Greys & Blacks
-  {n:'Black',h:'#1a1a1a'},{n:'Washed black',h:'#3D3D3D'},{n:'Charcoal',h:'#4a4a4a'},{n:'Slate',h:'#708090'},
-  {n:'Pewter',h:'#8D9091'},{n:'Grey',h:'#9E9E9E'},{n:'Light grey',h:'#D3D3D3'},{n:'Silver',h:'#C0C0C0'},
-  // Blues
-  {n:'Midnight blue',h:'#191970'},{n:'Navy',h:'#1B3A6B'},{n:'Indigo',h:'#3F51B5'},{n:'Cobalt blue',h:'#0047AB'},
-  {n:'Royal blue',h:'#4169E1'},{n:'Blue',h:'#2196F3'},{n:'Steel blue',h:'#4682B4'},{n:'Aegean blue',h:'#005778'},
-  {n:'Cornflower blue',h:'#6495ED'},{n:'Denim',h:'#1560BD'},{n:'Periwinkle',h:'#CCCCFF'},
-  {n:'Baby blue',h:'#89CFF0'},{n:'Ice blue',h:'#D6EAF8'},{n:'Light blue',h:'#90CAF9'},
-  {n:'Sky blue',h:'#B3E5FC'},{n:'Powder blue',h:'#B0E0E6'},{n:'Teal',h:'#00796B'},{n:'Cyan',h:'#00BCD4'},{n:'Turquoise',h:'#40E0D0'},
-  // Greens
-  {n:'Bottle green',h:'#006A4E'},{n:'Hunter green',h:'#355E3B'},{n:'Forest green',h:'#228B22'},
-  {n:'Emerald',h:'#50C878'},{n:'Jade',h:'#00A86B'},{n:'Green',h:'#388E3C'},{n:'Moss',h:'#8A9A5B'},
-  {n:'Fern',h:'#4F7942'},{n:'Eucalyptus',h:'#44D7A8'},{n:'Sage',h:'#8FAF8F'},{n:'Seafoam',h:'#93E9BE'},
-  {n:'Olive',h:'#827717'},{n:'Khaki green',h:'#6B7C3A'},{n:'Lime',h:'#8BC34A'},{n:'Chartreuse',h:'#7FFF00'},
-  {n:'Mint',h:'#B2DFDB'},{n:'Pistachio',h:'#93C572'},
-  // Browns & Nudes
-  {n:'Khaki',h:'#C8B560'},{n:'Wheat',h:'#F5DEB3'},{n:'Nude beige',h:'#E8C9A0'},{n:'Beige',h:'#D7C4A3'},
-  {n:'Sand',h:'#C2B280'},{n:'Stone',h:'#B2A491'},{n:'Camel',h:'#C19A6B'},{n:'Tan',h:'#D2B48C'},
-  {n:'Driftwood',h:'#AF9076'},{n:'Latte',h:'#C4A882'},{n:'Toffee',h:'#8B6343'},{n:'Hazelnut',h:'#9B6B3A'},
-  {n:'Cognac',h:'#9A463D'},{n:'Walnut',h:'#5C4033'},{n:'Brown',h:'#795548'},{n:'Chocolate',h:'#7B3F00'},
-  {n:'Mocha',h:'#6F4E37'},{n:'Rust',h:'#B7410E'},{n:'Terracotta',h:'#E2725B'},{n:'Cinnamon',h:'#D2691E'},
-  {n:'Burnt sienna',h:'#E97451'},{n:'Paprika',h:'#8D1F0A'},
-  // Reds
-  {n:'Burgundy',h:'#7B1829'},{n:'Wine',h:'#722F37'},{n:'Maroon',h:'#800000'},{n:'Ruby',h:'#9B111E'},
-  {n:'Scarlet',h:'#FF2400'},{n:'Red',h:'#D32F2F'},{n:'Cherry red',h:'#990000'},{n:'Brick',h:'#9C4221'},
-  {n:'Tomato',h:'#FF6347'},{n:'Coral',h:'#FF7043'},{n:'Salmon',h:'#FA8072'},
-  // Pinks
-  {n:'Deep fuchsia',h:'#C71585'},{n:'Raspberry',h:'#E30B5D'},{n:'Hot pink',h:'#FF69B4'},
-  {n:'Fuchsia',h:'#FF00FF'},{n:'Flamingo',h:'#FC8EAC'},{n:'Pink',h:'#E91E63'},
-  {n:'Candy pink',h:'#FF87AB'},{n:'Rose gold',h:'#B76E79'},{n:'Baby pink',h:'#FFB6C1'},
-  {n:'Blush',h:'#F4A6B0'},{n:'Rose',h:'#E8A0A8'},{n:'Dusty rose',h:'#DCAE96'},{n:'Mauve',h:'#B07898'},
-  // Purples
-  {n:'Dark purple',h:'#4A0072'},{n:'Purple',h:'#7B1FA2'},{n:'Byzantium',h:'#702963'},
-  {n:'Plum',h:'#8E4585'},{n:'Mulberry',h:'#C54B8C'},{n:'Amethyst',h:'#9966CC'},
-  {n:'Violet',h:'#8F00FF'},{n:'Heather',h:'#B69FC1'},{n:'Lavender',h:'#B39DDB'},
-  {n:'Wisteria',h:'#C9A0DC'},{n:'Lilac',h:'#DDA0DD'},
-  // Yellows & Oranges
-  {n:'Saffron',h:'#F4C430'},{n:'Yellow',h:'#FBC02D'},{n:'Sunshine',h:'#FFD300'},
-  {n:'Butter yellow',h:'#FFFD74'},{n:'Lemon',h:'#FFF44F'},{n:'Mustard',h:'#FFDB58'},
-  {n:'Gold',h:'#C9A72A'},{n:'Amber',h:'#FFA000'},{n:'Tangerine',h:'#F28500'},
-  {n:'Orange',h:'#F57C00'},{n:'Peach',h:'#FFCBA4'},{n:'Apricot',h:'#FBCEB1'},
-  // Specials & Prints
-  {n:'Multicolor',h:'linear-gradient(135deg,#f00,#ff0,#0f0,#00f)'},
-  {n:'Tie-dye',h:'linear-gradient(135deg,#f00,#ff69b4,#00f,#0f0)'},
-  {n:'Animal print',h:'repeating-linear-gradient(45deg,#8B4513 0,#8B4513 4px,#D2B48C 4px,#D2B48C 10px)'},
-  {n:'Iridescent',h:'linear-gradient(135deg,#ff69b4,#87ceeb,#98fb98,#ffd700,#ff69b4)'},
-  {n:'Denim wash',h:'linear-gradient(135deg,#1560BD,#4682B4,#89CFF0)'},
-  {n:'Plaid',h:'repeating-linear-gradient(90deg,#8B0000 0,#8B0000 4px,transparent 4px,transparent 20px),repeating-linear-gradient(0deg,#8B0000 0,#8B0000 4px,#1a1a1a 4px,#1a1a1a 20px)'},
-  {n:'Striped',h:'repeating-linear-gradient(90deg,#1a1a1a 0,#1a1a1a 5px,#fff 5px,#fff 10px)'},
-  {n:'Floral print',h:'linear-gradient(135deg,#ffb6c1,#90ee90,#87ceeb,#fffacd)'},
-  {n:'Snakeskin print',h:'repeating-linear-gradient(45deg,#8D7B6A 0,#8D7B6A 3px,#C4A882 3px,#C4A882 8px)'},
+  // ── Whites, Creams, Neutrals, Greys & Black ─────────────────────
+  {g:'Whites, Creams, Neutrals, Greys & Black',n:'Pure white',h:'#FFFFFF'},{n:'Chalk',h:'#F5F5F0'},{n:'Off-white',h:'#FAF7F0'},
+  {n:'Snow white',h:'#FFFAFA'},{n:'Light grey',h:'#E0E0E0'},{n:'Linen',h:'#FAF0E6'},
+  {n:'Ivory',h:'#FFFFF0'},{n:'Warm white',h:'#FDF5E6'},
+  {n:'Parchment',h:'#F1E9D2'},{n:'Silver grey',h:'#D0D0D0'},{n:'Cream',h:'#FFFDD0'},
+  {n:'Pearl',h:'#EAE0C8'},{n:'Wheat',h:'#F5DEB3'},
+  {n:'Ecru',h:'#EDD9B0'},{n:'Ash grey',h:'#B2BEB5'},{n:'Nude beige',h:'#E8C9A0'},
+  {n:'Beige',h:'#D7C4A3'},{n:'Tan',h:'#D2B48C'},{n:'Grey',h:'#9E9E9E'},
+  {n:'Stone',h:'#B2A491'},{n:'Latte',h:'#C4A882'},{n:'Sand',h:'#C2B280'},
+  {n:'Mid grey',h:'#8C8C8C'},{n:'Driftwood',h:'#AF9076'},{n:'Camel',h:'#C19A6B'},
+  {n:'Khaki',h:'#C8B560'},{n:'Cool grey',h:'#7D8B8C'},{n:'Slate grey',h:'#708090'},
+  {n:'Steel grey',h:'#607D8B'},{n:'Dark grey',h:'#5A5A5A'},{n:'Charcoal',h:'#4a4a4a'},
+  {n:'Graphite',h:'#383838'},{n:'Soft black',h:'#2D2D2D'},{n:'Black',h:'#1a1a1a'},
+  // ── Reds ────────────────────────────────────────────────────────
+  {g:'Reds',n:'Pale red',h:'#FF9999'},{n:'Salmon',h:'#FA8072'},
+  {n:'Light pink red',h:'#FF7F7F'},{n:'Tomato',h:'#FF6347'},{n:'Coral red',h:'#FF4136'},
+  {n:'Orange red',h:'#FF4500'},{n:'Red',h:'#FF0000'},{n:'Coral',h:'#FF7043'},
+  {n:'Bright red',h:'#D32F2F'},{n:'Scarlet',h:'#FF2400'},{n:'Peach red',h:'#FFAB76'},
+  {n:'Watermelon',h:'#FC6C85'},{n:'Hot red',h:'#FF1744'},{n:'Magenta red',h:'#C2185B'},
+  {n:'Crimson',h:'#DC143C'},{n:'Brick',h:'#9C4221'},{n:'Plum red',h:'#8E3A59'},
+  {n:'Dark red',h:'#8B0000'},{n:'Maroon',h:'#800000'},{n:'Rose red',h:'#C21E56'},
+  {n:'Ruby',h:'#9B111E'},{n:'Cherry red',h:'#990000'},{n:'Wine',h:'#722F37'},
+  {n:'Burgundy',h:'#7B1829'},{n:'Deep burgundy',h:'#560319'},{n:'Oxblood',h:'#4A0000'},
+  // ── Orange ──────────────────────────────────────────────────────
+  {g:'Orange',n:'Pale peach',h:'#FFDAC1'},{n:'Apricot',h:'#FBCEB1'},
+  
+  {n:'Dusty coral',h:'#E8917A'},{n:'Salmon',h:'#FA8072'},
+  {n:'Terracotta',h:'#E2725B'},{n:'Coral',h:'#FF7043'},
+  {n:'Pumpkin',h:'#FF7518'},{n:'Marigold',h:'#EDA820'},{n:'Bronze',h:'#CD7F32'},
+  {n:'Copper',h:'#B87333'},{n:'Amber',h:'#FFA000'},{n:'Cinnamon',h:'#D2691E'},
+  {n:'Orange',h:'#F57C00'},{n:'Tangerine',h:'#F28500'},
+  {n:'Hazelnut',h:'#9B6B3A'},{n:'Toffee',h:'#8B6343'},{n:'Brown',h:'#795548'},
+  {n:'Chestnut',h:'#954535'},{n:'Auburn',h:'#A52A2A'},{n:'Sienna',h:'#A0522D'},
+  {n:'Rust',h:'#B7410E'},{n:'Burnt orange',h:'#CC5500'},{n:'Mocha',h:'#6F4E37'},
+  {n:'Mahogany',h:'#C04000'},{n:'Walnut',h:'#5C4033'},
+  {n:'Paprika',h:'#8D1F0A'},{n:'Chocolate',h:'#7B3F00'},
+  {n:'Espresso',h:'#3B1F14'},
+  // ── Yellows ─────────────────────────────────────────────────────
+  {g:'Yellows',n:'Pale yellow',h:'#FFFFE0'},{n:'Cream yellow',h:'#FFFACD'},{n:'Butter yellow',h:'#FFFD74'},
+  {n:'Mustard',h:'#FFDB58'},{n:'Lemon',h:'#FFF44F'},{n:'Yellow',h:'#FFEB3B'},
+  {n:'Saffron',h:'#F4C430'},{n:'Honey',h:'#E8A020'},{n:'Golden yellow',h:'#FFC107'},
+  {n:'Gold',h:'#C9A72A'},{n:'Canary',h:'#FFEF00'},{n:'Sunshine',h:'#FFD300'},
+  {n:'Ochre',h:'#CC7722'},{n:'Dark mustard',h:'#D4A017'},{n:'Dark gold',h:'#B8860B'},
+  // ── Greens ──────────────────────────────────────────────────────
+  {g:'Greens',n:'Honeydew',h:'#F0FFF0'},{n:'Light sage',h:'#C8DABC'},{n:'Mint',h:'#B2DFDB'},
+  {n:'Pale green',h:'#98FB98'},{n:'Seafoam',h:'#93E9BE'},{n:'Sage',h:'#8FAF8F'},
+  {n:'Pistachio',h:'#93C572'},{n:'Muted green',h:'#7A9A7A'},{n:'Eucalyptus',h:'#44D7A8'},
+  {n:'Emerald',h:'#50C878'},{n:'Lime green',h:'#32CD32'},{n:'Chartreuse',h:'#7FFF00'},
+  {n:'Green',h:'#388E3C'},{n:'Fern',h:'#4F7942'},{n:'Kelly green',h:'#4CBB17'},
+  {n:'Moss',h:'#8A9A5B'},{n:'Khaki green',h:'#6B7C3A'},{n:'Olive',h:'#827717'},
+  {n:'Jade',h:'#00A86B'},{n:'Forest green',h:'#228B22'},{n:'Hunter green',h:'#355E3B'},
+  {n:'Army green',h:'#3B4A2F'},{n:'Dark olive',h:'#4B5320'},{n:'Pine green',h:'#01796F'},
+  {n:'Bottle green',h:'#006A4E'},{n:'Dark green',h:'#1B5E20'},
+  // ── Blue ────────────────────────────────────────────────────────
+  {g:'Blue',n:'Ice blue',h:'#D6EAF8'},{n:'Periwinkle',h:'#CCCCFF'},
+  {n:'Powder blue',h:'#B0E0E6'},{n:'Light blue',h:'#90CAF9'},{n:'Baby blue',h:'#89CFF0'},
+  {n:'Light teal',h:'#80CBC4'},
+  {n:'Cornflower blue',h:'#6495ED'},{n:'Dusty blue',h:'#7B9BB8'},{n:'Blue grey',h:'#6B7FA8'},
+  {n:'Royal blue',h:'#4169E1'},{n:'Turquoise',h:'#40E0D0'},{n:'Cadet blue',h:'#5F9EA0'},
+  {n:'Blue',h:'#2196F3'},{n:'Steel blue',h:'#4682B4'},{n:'Storm blue',h:'#4A6FA5'},
+  {n:'Indigo',h:'#3F51B5'},{n:'Aqua',h:'#00FFFF'},
+  {n:'Denim',h:'#1560BD'},{n:'Cyan',h:'#00BCD4'},
+  {n:'Cobalt blue',h:'#0047AB'},{n:'Dark indigo',h:'#1A237E'},
+  {n:'Midnight blue',h:'#191970'},{n:'Navy',h:'#1B3A6B'},
+  {n:'Teal',h:'#00796B'},{n:'Aegean blue',h:'#005778'},
+  
+  {n:'Dark teal',h:'#004D40'},{n:'Dark navy',h:'#0A1931'},
+  // ── Purple ──────────────────────────────────────────────────────
+  {g:'Purple',n:'Pale lavender',h:'#DDD5F3'},{n:'Soft lilac',h:'#E8D5E8'},{n:'Thistle',h:'#D8BFD8'},
+  {n:'Lavender',h:'#B39DDB'},{n:'Pink lilac',h:'#DDA0DD'},{n:'Wisteria',h:'#C9A0DC'},
+  {n:'Heather',h:'#B69FC1'},{n:'Soft purple',h:'#C090D0'},{n:'Lilac',h:'#C8A2C8'},
+  {n:'Orchid',h:'#DA70D6'},{n:'Violet',h:'#8F00FF'},{n:'Amethyst',h:'#9966CC'},
+  {n:'Medium purple',h:'#9370DB'},{n:'Purple',h:'#7B1FA2'},{n:'Plum',h:'#8E4585'},
+  {n:'Mauve purple',h:'#7B5B8A'},{n:'Grape',h:'#6F2DA8'},{n:'Byzantium',h:'#702963'},
+  {n:'Dark plum',h:'#5D2B6B'},{n:'Berry',h:'#8B0057'},{n:'Dark purple',h:'#4A0072'},
+  {n:'Eggplant',h:'#380024'},{n:'Blackberry',h:'#4D0135'},
+  // ── Pinks ───────────────────────────────────────────────────────
+  {g:'Pinks',n:'Ballet pink',h:'#FADADD'},{n:'Baby pink',h:'#FFB6C1'},{n:'Powder pink',h:'#FFD1DC'},
+  {n:'Blush pink',h:'#F4A6B0'},{n:'Soft pink',h:'#FFC0CB'},{n:'Flamingo',h:'#FC8EAC'},
+  {n:'Cotton candy',h:'#FFBCD9'},{n:'Bubblegum',h:'#FFA6C9'},{n:'Watermelon pink',h:'#FC6C85'},
+  {n:'Strawberry',h:'#FC5A8D'},{n:'Hot pink',h:'#FF69B4'},{n:'Pink',h:'#E91E63'},
+  {n:'Cerise',h:'#DE3163'},{n:'Deep fuchsia',h:'#C71585'},{n:'Dusty rose',h:'#DCAE96'},
+  {n:'Rose gold',h:'#B76E79'},{n:'Mauve',h:'#B07898'},
+  {n:'Cerise dark',h:'#DE3163'},{n:'Raspberry',h:'#E30B5D'},{n:'Deep rose',h:'#C2185B'},
+  {n:'Magenta',h:'#FF0090'},{n:'Fuchsia',h:'#FF00FF'},{n:'Candy pink',h:'#FF87AB'},
+  {n:'Antique pink',h:'#C08080'},
+  // ── Specials & Prints ───────────────────────────────────────────
+  {g:'Specials & Prints',n:'Multicolor',h:'linear-gradient(135deg,#f00,#ff0,#0f0,#00f)'},{n:'Tie-dye',h:'linear-gradient(135deg,#f00,#ff69b4,#00f,#0f0)'},{n:'Iridescent',h:'linear-gradient(135deg,#ff69b4,#87ceeb,#98fb98,#ffd700,#ff69b4)'},
+  {n:'Holographic',h:'linear-gradient(135deg,#ff0080,#00ffff,#ff0080,#ffff00,#00ffff)'},{n:'Floral print',h:'linear-gradient(135deg,#ffb6c1,#90ee90,#87ceeb,#fffacd)'},{n:'Animal print',h:'repeating-linear-gradient(45deg,#8B4513 0,#8B4513 4px,#D2B48C 4px,#D2B48C 10px)'},
+  {n:'Leopard print',h:'repeating-linear-gradient(45deg,#C19A6B 0,#C19A6B 6px,#8B4513 6px,#8B4513 8px)'},{n:'Snakeskin print',h:'repeating-linear-gradient(45deg,#8D7B6A 0,#8D7B6A 3px,#C4A882 3px,#C4A882 8px)'},{n:'Striped',h:'repeating-linear-gradient(90deg,#1a1a1a 0,#1a1a1a 5px,#fff 5px,#fff 10px)'},
+  {n:'Plaid',h:'repeating-linear-gradient(90deg,#8B0000 0,#8B0000 4px,transparent 4px,transparent 20px),repeating-linear-gradient(0deg,#8B0000 0,#8B0000 4px,#1a1a1a 4px,#1a1a1a 20px)'},{n:'Tartan',h:'repeating-linear-gradient(90deg,#005000 0,#005000 6px,transparent 6px,transparent 18px,#8B0000 18px,#8B0000 22px,transparent 22px,transparent 30px),repeating-linear-gradient(0deg,#005000 0,#005000 6px,transparent 6px,transparent 18px,#8B0000 18px,#8B0000 22px,transparent 22px,transparent 30px),#1a1a1a'},
 ];
+
+// Colour groups for two-level filtering
+const COLOR_GROUPS=[
+  {g:'Whites & Creams',colors:['Pure white','Warm white','Off-white','Ivory','Linen','Cream','Ecru','Pearl','Parchment','Chalk']},
+  {g:'Nudes & Neutrals',colors:['Nude beige','Wheat','Sand','Beige','Stone','Khaki','Camel','Tan','Driftwood','Latte']},
+  {g:'Greys & Black',colors:['Light grey','Silver grey','Ash grey','Grey','Mid grey','Slate grey','Steel grey','Blue grey','Dark grey','Charcoal','Graphite','Soft black','Black','Washed black']},
+  {g:'Reds',colors:['Pale red','Light red','Tomato','Red','Crimson','Rose red','Brick red','Brick','Ruby','Cherry red','Wine','Maroon','Burgundy','Oxblood','Scarlet','Watermelon red']},
+  {g:'Orange & Brown',colors:['Apricot','Dusty coral','Salmon','Light coral','Coral','Terracotta','Tangerine','Orange','Pumpkin','Amber','Marigold','Bronze','Copper','Cinnamon','Burnt orange','Rust','Paprika','Brown','Walnut','Chestnut','Auburn','Sienna','Mahogany','Chocolate','Mocha','Hazelnut','Toffee','Espresso']},
+  {g:'Yellows',colors:['Pale yellow','Cream yellow','Butter yellow','Lemon','Canary','Yellow','Sunshine','Golden yellow','Saffron','Honey','Mustard','Ochre','Dark mustard','Gold','Dark gold']},
+  {g:'Greens',colors:['Honeydew','Mint','Light sage','Seafoam','Pistachio','Sage','Pale green','Light chartreuse','Chartreuse','Lime green','Fern','Green','Jade','Emerald','Medium green','Eucalyptus','Moss','Khaki green','Olive','Muted green','Dusty green','Army green','Dark olive','Forest green','Hunter green','Pine green','Bottle green','Dark green']},
+  {g:'Blues & Teals',colors:['Ice blue','Powder blue','Periwinkle','Baby blue','Light blue','Cornflower blue','Dusty blue','Blue grey','Cyan','Blue','Royal blue','Steel blue','Storm blue','Denim','Indigo','Teal','Aegean blue','Cobalt blue','Light teal','Turquoise','Aqua','Navy','Dark indigo','Midnight blue','Dark teal','Dark navy','Cadet blue']},
+  {g:'Purples',colors:['Pale lavender','Soft lilac','Thistle','Lavender','Wisteria','Heather','Lilac','Soft purple','Orchid','Amethyst','Violet','Purple','Plum','Grape','Byzantium','Berry','Dark purple','Blackberry','Boysenberry','Pink lilac','Medium purple']},
+  {g:'Pinks',colors:['Ballet pink','Baby pink','Powder pink','Blush pink','Rose quartz','Flamingo','Candy pink','Strawberry','Hot pink','Pink','Cerise','Deep fuchsia','Rose gold','Dusty rose','Antique pink','Bubblegum','Deep rose','Raspberry','Magenta','Fuchsia','Mauve','Peach pink','Coral pink','Salmon pink']},
+  {g:'Metallics',colors:['Silver','Gold metallic','Rose gold metallic','Bronze','Copper','Champagne','Gunmetal']},
+  {g:'Prints & Special',colors:['Multicolor','Tie-dye','Animal print','Iridescent','Holographic','Floral print','Leopard print','Snakeskin print','Striped','Plaid','Tartan','Washed black']},
+];
+
+function getColorGroup(colorName){
+  if(!colorName)return null;
+  return COLOR_GROUPS.find(g=>g.colors.includes(colorName))?.g||null;
+}
+
 
 function gi(id){return document.getElementById(id);}
 function gv(id){return(gi(id)||{}).value||'';}
@@ -441,24 +500,31 @@ function sCt(h){gi('content').innerHTML=h;}
 
 // ── ALL ITEMS ─────────────────────────────────────────────────────────────────
 function rItems(){
-  const sr=gv('isrch').toLowerCase(),cf=gv('fcol'),tf=gv('ftyp'),bf=gv('fbr'),sf=gv('fsea'),of=gv('focc'),catf=gv('fcat'),so=gv('fsort')||'name';
+  const sr=gv('isrch').toLowerCase(),cfg=gv('fcolg'),cf=gv('fcol'),tf=gv('ftyp'),bf=gv('fbr'),sf=gv('fsea'),of=gv('focc'),catf=gv('fcat'),so=gv('fsort')||'name';
   let list=items.filter(i=>{
     if(sr&&![i.name,i.brand||'',i.subtype||'',...(i.tags||[])].join(' ').toLowerCase().includes(sr))return false;
-    if(cf&&i.color!==cf)return false;if(tf&&i.subtype!==tf)return false;if(bf&&i.brand!==bf)return false;
+    if(cfg&&getColorGroup(i.color)!==cfg)return false;
+    if(cf&&i.color!==cf)return false;
+    if(tf&&i.subtype!==tf)return false;if(bf&&i.brand!==bf)return false;
     if(sf&&i.season!==sf)return false;if(of&&i.occasion!==of)return false;if(catf&&i.category!==catf)return false;
     return true;
   });
   const fn={name:(a,b)=>a.name.localeCompare(b.name),brand:(a,b)=>(a.brand||'').localeCompare(b.brand||''),color:(a,b)=>(a.color||'').localeCompare(b.color||''),season:(a,b)=>(a.season||'').localeCompare(b.season||''),worn:(a,b)=>(b.wornCount||0)-(a.wornCount||0),newest:(a,b)=>b.addedAt-a.addedAt};
   list.sort(fn[so]||fn.name);
-  const cols=[...new Set(items.map(i=>i.color).filter(Boolean))].sort();
+  // Build color options — filtered by group if one is selected
+  const itemColors=[...new Set(items.map(i=>i.color).filter(Boolean))];
+  const colsInGroup=cfg?COLOR_GROUPS.find(g=>g.g===cfg)?.colors.filter(c=>itemColors.includes(c))||[]:itemColors.sort();
   const brs=[...new Set(items.map(i=>i.brand).filter(Boolean))].sort();
   const typs=[...new Set(items.map(i=>i.subtype).filter(Boolean))].sort();
   const occs=[...new Set(items.map(i=>i.occasion).filter(Boolean))].sort();
+  // Color group options — only show groups that have items
+  const usedGroups=COLOR_GROUPS.filter(g=>g.colors.some(c=>itemColors.includes(c)));
   sCH(`<div class="ch"><div class="cht">All clothes</div><div class="chs">${list.length} of ${items.length} item${items.length!==1?'s':''}</div></div>`);
   sFB(`<div class="fb">
     <div class="fbs"><input type="text" id="isrch" placeholder="Search..." value="${sr.replace(/"/g,'&quot;')}" oninput="rItems()"></div>
     <select class="fsel" id="ftyp" onchange="rItems()"><option value="">All types</option>${typs.map(t=>`<option ${tf===t?'selected':''}>${t}</option>`).join('')}</select>
-    <select class="fsel" id="fcol" onchange="rItems()"><option value="">All colors</option>${cols.map(c=>`<option ${cf===c?'selected':''}>${c}</option>`).join('')}</select>
+    <select class="fsel" id="fcolg" onchange="rColSub()" style="min-width:110px"><option value="">All colours</option>${usedGroups.map(g=>`<option ${cfg===g.g?'selected':''}>${g.g}</option>`).join('')}</select>
+    <select class="fsel" id="fcol" onchange="rItems()" style="min-width:110px"><option value="">Any shade</option>${colsInGroup.map(c=>`<option ${cf===c?'selected':''}>${c}</option>`).join('')}</select>
     <select class="fsel" id="fbr" onchange="rItems()"><option value="">All brands</option>${brs.map(b=>`<option ${bf===b?'selected':''}>${b}</option>`).join('')}</select>
     <select class="fsel" id="fsea" onchange="rItems()"><option value="">All seasons</option>${['Spring','Summer','Autumn','Winter','All-season'].map(s=>`<option ${sf===s?'selected':''}>${s}</option>`).join('')}</select>
     <select class="fsel" id="focc" onchange="rItems()"><option value="">All styles</option>${occs.map(o=>`<option ${of===o?'selected':''}>${o}</option>`).join('')}</select>
@@ -469,6 +535,11 @@ function rItems(){
   </div>`);
   if(!list.length){sCt(`<div class="empty"><div class="ei">👗</div><p>${items.length?'No items match.':'Add your first item!'}</p></div>`);return;}
   sCt(gmode==='list'?`<div style="display:flex;flex-direction:column;gap:6px">${list.map(iLR).join('')}</div>`:`<div class="grid">${list.map(iCard).join('')}</div>`);
+}
+function rColSub(){
+  // When colour group changes, reset specific colour and re-render
+  const el=gi('fcol');if(el)el.value='';
+  rItems();
 }
 function setGM(m){gmode=m;rItems();}
 
@@ -527,13 +598,16 @@ function openAddItem(id=null){
       <div class="g2">
         <div class="fr"><label>Type</label>
           <select class="sel" id="f-subtype">
-            <optgroup label="Tops"><option>Tops</option><option>T-shirt</option><option>Top</option><option>Shirt</option><option>Oxford shirt</option><option>Polo shirt</option><option>Henley</option><option>Blouse</option><option>Sweater</option><option>Cardigan</option><option>Hoodie</option><option>Crop top</option><option>Tank top</option><option>Cami</option><option>Sleeveless top</option><option>Tube top</option><option>Corset top</option><option>Lace top</option><option>Fishnet top</option><option>Off-shoulder top</option><option>Wrap top</option><option>Halter top</option><option>Bodysuit</option></optgroup>
+            <optgroup label="Tops"><option>T-shirt</option><option>Top</option><option>Shirt</option><option>Polo shirt</option><option>Henley</option><option>Blouse</option><option>Sweater</option><option>Cardigan</option><option>Hoodie</option><option>Crop top</option><option>Tank top</option><option>Cami</option><option>Sleeveless top</option><option>Tube top</option><option>Corset top</option><option>Lace top</option><option>Fishnet top</option><option>Off-shoulder top</option><option>Wrap top</option><option>Halter top</option><option>Bodysuit</option></optgroup>
             <optgroup label="Outerwear"><option>Jacket</option><option>Coat</option><option>Blazer</option><option>Gilet</option><option>Trench coat</option><option>Puffer jacket</option><option>Leather jacket</option><option>Bomber jacket</option><option>Denim jacket</option><option>Windbreaker</option><option>Raincoat</option><option>Fur coat</option><option>Shearling jacket</option><option>Wax jacket</option><option>Cape</option><option>Poncho</option></optgroup>
             <optgroup label="Bottoms"><option>Jeans</option><option>Straight jeans</option><option>Flared jeans</option><option>Skinny jeans</option><option>Trousers</option><option>Wide-leg trousers</option><option>Linen trousers</option><option>Paperbag trousers</option><option>Cargo pants</option><option>Pant</option><option>Shorts</option><option>Mini shorts</option><option>Bermuda shorts</option><option>Culotte</option><option>Skirt</option><option>Leggings</option><option>Cycling shorts</option><option>Mini skirt</option><option>Midi skirt</option><option>Maxi skirt</option></optgroup>
-            <optgroup label="Full outfit"><option>Dress</option><option>Mini dress</option><option>Midi dress</option><option>Maxi dress</option><option>Bodycon dress</option><option>Wrap dress</option><option>Slip dress</option><option>Shirt dress</option><option>Babydoll dress</option><option>Smock dress</option><option>Jumpsuit</option><option>Playsuit</option><option>Romper</option><option>Suit</option><option>Co-ord set</option><option>Two-piece set</option></optgroup>
+            <optgroup label="Full outfit"><option>Dress</option><option>Mini dress</option><option>Midi dress</option><option>Maxi dress</option><option>Bodycon dress</option><option>Wrap dress</option><option>Slip dress</option><option>Shirt dress</option><option>Babydoll dress</option><option>Jumpsuit</option><option>Playsuit</option><option>Romper</option><option>Suit</option><option>Co-ord set</option><option>Two-piece set</option></optgroup>
             <optgroup label="Loungewear &amp; Sleepwear"><option>Pajamas</option><option>Loungewear set</option><option>Shorts set</option><option>Robe</option><option>Nightgown</option><option>Slip</option><option>Onesie</option><option>Thermal set</option><option>Sweatpants</option><option>Sweatshirt</option><option>Joggers</option></optgroup>
             <optgroup label="Footwear"><option>Sneakers</option><option>Boots</option><option>Ankle boots</option><option>Heels</option><option>Sandals</option><option>Loafers</option><option>Flats</option><option>Slippers</option><option>Mules</option><option>Platform shoes</option></optgroup>
-            <optgroup label="Accessories"><option>Belt</option><option>Hat</option><option>Cap</option><option>Beanie</option><option>Beret</option><option>Bucket hat</option><option>Headband</option><option>Hair scarf</option><option>Bandana</option><option>Scarf</option><option>Bag</option><option>Handbag</option><option>Tote bag</option><option>Backpack</option><option>Clutch</option><option>Crossbody bag</option><option>Shoulder bag</option><option>Mini bag</option><option>Sunglasses</option><option>Jewellery</option><option>Necklace</option><option>Choker</option><option>Earrings</option><option>Bracelet</option><option>Anklet</option><option>Ring</option><option>Brooch</option><option>Watch</option><option>Hair accessory</option><option>Gloves</option></optgroup>
+            <optgroup label="Hats"><option>Hat</option><option>Cap</option><option>Beanie</option><option>Beret</option><option>Bucket hat</option><option>Headband</option><option>Hair scarf</option><option>Bandana</option><option>Hair accessory</option></optgroup>
+            <optgroup label="Bags"><option>Bag</option><option>Handbag</option><option>Tote bag</option><option>Backpack</option><option>Clutch</option><option>Crossbody bag</option><option>Shoulder bag</option><option>Mini bag</option></optgroup>
+            <optgroup label="Jewellery"><option>Jewellery</option><option>Necklace</option><option>Choker</option><option>Earrings</option><option>Bracelet</option><option>Anklet</option><option>Ring</option><option>Brooch</option><option>Watch</option></optgroup>
+            <optgroup label="Other accessories"><option>Belt</option><option>Scarf</option><option>Sunglasses</option><option>Gloves</option></optgroup>
             <optgroup label="Hosiery"><option>Tights</option><option>Knee-high socks</option><option>Ankle socks</option><option>Leg warmers</option></optgroup>
             <optgroup label="Other"><option>Underwear</option><option>Bra</option><option>Socks</option><option>Swimwear</option><option>Bikini</option><option>One-piece</option><option>Other</option></optgroup>
           </select>
@@ -561,7 +635,7 @@ function openAddItem(id=null){
         <div class="fr"><label>Store / URL</label><input class="inp" id="f-store" placeholder="ASOS, Zara.com..." value="${item?.store||''}"></div>
       </div>
       <div class="fr"><label>Care instructions</label><input class="inp" id="f-care" placeholder="30° machine wash" value="${item?.care||''}"></div>
-      <div class="fr"><label>Color</label><div class="cr" id="cpick"></div></div>
+      <div class="fr"><label>Color</label><div class="cr" id="cpick" style="align-items:flex-start"></div></div>
       <div class="fr"><label>Tags <span style="font-weight:400;color:var(--text3)">(comma-separated)</span></label><input class="inp" id="f-tags" placeholder="vintage, gift, favourite..." value="${(item?.tags||[]).join(', ')}"></div>
       <div class="fr"><label>Notes</label><textarea class="txa" id="f-notes" placeholder="Styling ideas, fit notes...">${item?.notes||''}</textarea></div>
       <div class="fr"><label>Photos</label><div id="fpp" style="margin-bottom:6px"></div><input type="file" id="f-photo" accept="image/*" multiple onchange="prevIP(this)" style="display:none"><label for="f-photo" style="display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px;border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;font-size:13px;background:var(--bg)">📷 Choose photos</label></div>
@@ -580,7 +654,12 @@ function openAddItem(id=null){
   bCP(item?.color||null);renderIPP();
 }
 
-function bCP(sel){gi('cpick').innerHTML=COLORS.map(c=>`<div class="cd ${sel===c.n?'on':''}" title="${c.n}" style="background:${c.h}" onclick="selC('${c.n}',this)"></div>`).join('');}
+function bCP(sel){
+  gi('cpick').innerHTML=COLORS.map(c=>{
+    const dot=`<div class="cd ${sel===c.n?'on':''}" title="${c.n}" style="background:${c.h}" onclick="selC('${c.n}',this)"></div>`;
+    return c.g?`<div style="width:100%;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.09em;margin:8px 0 4px;flex-basis:100%">${c.g}</div>${dot}`:dot;
+  }).join('');
+}
 function selC(n,dot){document.querySelectorAll('.cd').forEach(d=>d.classList.remove('on'));dot.classList.add('on');}
 function gC(){const d=document.querySelector('.cd.on');return d?d.title:null;}
 
@@ -837,23 +916,57 @@ const SHO_TYPES=['Sneakers','Boots','Ankle boots','Heels','Sandals','Loafers','F
 const ACC_TYPES=['Belt','Hat','Cap','Beanie','Scarf','Bag','Handbag','Tote bag','Backpack','Sunglasses','Jewellery','Necklace','Watch'];
 
 const STYLES=[
-  {id:'my',label:'✨ My style',desc:'Outfits tailored to what you already own',palette:null,tips:['Combine your most-worn items in new ways','Try pairing items from different categories','Use accessories to elevate basics','Let colour be your guide — build around one hero piece'],names:['Effortless look','Weekend ready','Day-to-night','Elevated basics','Fresh take','Off-duty']},
-  {id:'minimal',label:'🤍 Minimalist',desc:'Clean lines, neutral tones, less is more',palette:['White','Off-white','Black','Grey','Beige','Camel','Cream','Ivory','Charcoal','Light grey','Silver'],tips:['Stick to a max of 2-3 colours per outfit','Let fit and fabric do all the talking','One statement piece — rest kept simple','Tuck in tops for a cleaner silhouette','Avoid prints — texture is your friend'],names:['Quiet confidence','Clean slate','Monochrome moment','Neutral grounds','Effortless minimal']},
-  {id:'streetwear',label:'🧢 Streetwear',desc:'Urban, bold, oversized, expressive',palette:['Black','White','Grey','Navy','Olive','Khaki'],tips:['Layer oversized pieces over fitted ones','Mix athletic and casual pieces freely','Bold graphics as the focal point','Chunky shoes complete the look','Backwards caps or beanies add edge'],names:['Off duty','Street level','Urban uniform','Block party','City moves']},
-  {id:'coastal',label:'🌊 Coastal grandmother',desc:'Relaxed, breezy, linen & light tones',palette:['White','Beige','Sand','Sky blue','Light blue','Baby blue','Lemon','Mint','Powder blue','Cream','Ivory'],tips:['Light breathable fabrics like linen and cotton','Relaxed fits — nothing too structured','Roll up sleeves and hems for that lived-in look','Wicker bags and simple sandals are perfect','Natural textures and sun-bleached tones'],names:['Sunday morning','Coastal drift','Harbour days','Linen season','Breezy afternoon']},
-  {id:'coquette',label:'🎀 Coquette',desc:'Feminine, soft, bows, blush & lace vibes',palette:['Blush','Baby pink','White','Lavender','Dusty rose','Rose','Lilac','Mauve','Ivory','Periwinkle'],tips:['Add a bow or ribbon as your focal point','Layer delicate jewellery — rings and necklaces','Soft feminine silhouettes — nothing sharp or boxy','Ballet flats or kitten heels elevate any look','Carry a dainty bag to complete the aesthetic'],names:['Soft focus','Ballet core','Pink fantasy','Darling look','Sugar rush']},
-  {id:'oldmoney',label:'💎 Old money',desc:'Timeless, tailored, quiet luxury',palette:['Navy','Camel','Cream','Beige','Brown','White','Tan','Khaki','Gold','Chocolate'],tips:['Quality over quantity — keep it classic','Tailored fits — nothing sloppy or too relaxed','Understated colours with zero loud logos','Gold jewellery adds that finishing touch','Loafers or clean leather shoes are key'],names:['Heritage look','Polo club','Quiet luxury','Club classic','Understated wealth']},
-  {id:'downtown',label:'🏙️ Downtown girl',desc:'Cool, effortless, NYC energy — leather & coffee',palette:['Black','Brown','Camel','Tan','White','Grey','Chocolate','Burgundy'],tips:['Leather pieces are your best friend','Oversized blazer over everything','Simple basics elevated with great accessories','Coffee-toned neutrals feel very downtown','Combat boots or loafers finish the look'],names:['Downtown mood','Coffee run','East side','City girl','Concrete jungle']},
-  {id:'urbancore',label:'🔩 Urbancore',desc:'Industrial, functional, techwear-influenced',palette:['Black','Charcoal','Grey','Olive','Khaki','Silver'],tips:['Functional pieces — cargo, utility pockets','Monochromatic dark outfits feel very urbancore','Layer different textures like nylon and cotton','Chunky functional shoes work perfectly','Minimise colour — let silhouette do the work'],names:['City infrastructure','Functional fit','Urban grid','Concrete wave','System override']},
-  {id:'stargirl',label:'⭐ Stargirl',desc:'Dreamy, celestial, sparkle and wonder',palette:['Silver','Gold','Lavender','Baby blue','White','Lilac','Periwinkle','Pink'],tips:['Add shimmer or metallic details wherever possible','Layer delicate star and moon jewellery','Floaty feminine pieces feel very stargirl','Glitter or sparkle in accessories counts','Dreamy pastels mixed with silver are perfect'],names:['Celestial moment','Star light','Moon child','Galaxy glow','Shooting star']},
-  {id:'messyitgirl',label:'💋 Messy it girl',desc:'Effortlessly undone, cool-girl energy',palette:['Black','White','Grey','Denim','Brown','Burgundy','Red'],tips:['Nothing should look too perfect or planned','Oversized with something fitted underneath','Tuck in casually — not perfectly','Messy bun or undone hair completes the look','One bold piece makes it feel intentional'],names:['Undone chic','Cool girl','Accidental outfit','Too cool','Off the cuff']},
-  {id:'romantic',label:'📖 Romantic academia',desc:'Literary, romantic, soft and scholarly',palette:['Brown','Camel','Cream','Burgundy','Dusty rose','Olive','Mauve','Tan'],tips:['Layer a knit or cardigan over everything','Mix florals with plaid or checks','Carry a tote or structured bag','Book-ish accessories — scarves, glasses','Vintage-inspired silhouettes feel perfect'],names:['Library hours','Soft study','Chapter one','Candlelight','Garden party']},
-  {id:'y2k',label:'⭐ Y2K',desc:'Bold colours, low rise, futuristic vibes',palette:['Pink','Hot pink','Silver','Baby blue','Purple','Yellow','Fuchsia','Turquoise'],tips:['Low-rise and crop combinations are classic Y2K','Mix metallics with bright colours freely','Accessories are everything — go bold','Butterfly clips and chunky jewellery work perfectly','Tinted sunglasses complete any Y2K look'],names:['2004 throwback','Pop princess','Cyber babe','Digital age','Glitter era']},
-  {id:'boho',label:'🌿 Boho',desc:'Flowy, earthy, layered & free-spirited',palette:['Brown','Tan','Rust','Olive','Terracotta','Cream','Mustard','Apricot'],tips:['Layer loose flowy pieces freely','Mix textures — knits, linen, suede, fringe','Earthy tones with natural woven accessories','Stack multiple bracelets and rings','Long skirts or wide trousers feel very boho'],names:['Free spirit','Earth child','Festival mood','Wild garden','Wanderer']},
-  {id:'dark',label:'🖤 Dark academia',desc:'Moody, scholarly, plaid & deep tones',palette:['Black','Charcoal','Brown','Burgundy','Navy','Olive','Mocha','Chocolate'],tips:['Layer structured pieces like blazers and vests','Mix plaids, tweeds and cable knits','Deep jewel tones work together perfectly','Carry a structured leather bag','Chelsea boots or loafers are the shoe'],names:['Study hall','Autumn library','Candlewick','Midnight scholar','Gothic garden']},
-  {id:'sporty',label:'🏃 Sporty chic',desc:'Athletic meets elevated, effortless cool',palette:['Black','White','Grey','Navy','Olive'],tips:['Mix athletic pieces with tailored ones','Monochrome sporty looks feel very elevated','Clean trainers tie the whole look together','A structured bag balances the athletic pieces','Sleek ponytail or slicked-back hair finishes it'],names:['Active energy','Court side','Track to table','Sport luxe','Game day']},
-  {id:'preppy',label:'🎓 Preppy',desc:'Polished, classic, collegiate energy',palette:['Navy','White','Red','Green','Yellow','Camel','Burgundy'],tips:['Always tuck in your top','Layer a knit over a collared shirt','Classic accessories — loafers, belts, structured bags','Pleated trousers and tailored blazers feel very preppy','Stripe or check patterns work perfectly'],names:['Class photo','Campus style','Ivy league','Weekend club','Academic chic']},
-  {id:'vintage',label:'🕰️ Vintage',desc:'Retro-inspired, thrifted, nostalgic charm',palette:['Brown','Tan','Rust','Mustard','Olive','Burgundy','Terracotta','Mocha'],tips:['Mix vintage pieces with modern basics','Let one vintage hero piece lead the look','Thrifted textures add authentic character','High waisted everything feels vintage','Vintage accessories finish it off perfectly'],names:['Retro Sunday','Thrift find','Past perfect','Nostalgia trip','Vintage chapter']},
+  {id:'my',label:'✨ My style',desc:'Outfits built from your wardrobe — your way',palette:null,
+   tips:['Start with one hero piece and build around it','Mix textures to add depth — denim with knit, silk with cotton','Accessories can transform even the simplest outfit','Tuck, half-tuck or knot your top for instant shape','Try items together you would not normally pair'],
+   names:['Effortless look','Weekend ready','Day-to-night','Elevated basics','Fresh take','Off-duty']},
+  {id:'minimal',label:'🤍 Minimalist',desc:'Clean lines, neutral tones, intentional simplicity',palette:['White','Off-white','Ivory','Cream','Black','Grey','Charcoal','Beige','Camel','Sand','Stone','Light grey','Silver'],
+   tips:['Max 2 colours — neutrals only, no prints','Let silhouette and fit do all the talking','One subtle texture contrast is enough (silk + wool, denim + cotton)','Tuck your top fully — nothing half-done','Delicate minimal jewellery — one piece maximum'],
+   names:['Quiet confidence','Clean slate','Monochrome moment','Neutral grounds','Effortless minimal']},
+  {id:'streetwear',label:'🧢 Streetwear',desc:'Urban, bold, oversized — where comfort meets edge',palette:['Black','White','Grey','Charcoal','Navy','Olive','Khaki'],
+   tips:['Contrast oversized top with slimmer bottoms or vice versa','Graphic or statement piece leads — rest stays simple','Chunky trainers or boots are non-negotiable','Layer a hoodie under an open jacket for dimension','A cap or beanie worn low completes the vibe'],
+   names:['Off duty','Street level','Urban uniform','Block party','City moves']},
+  {id:'coastal',label:'🌊 Coastal grandmother',desc:'Relaxed, breezy, effortlessly sun-bleached',palette:['White','Off-white','Ivory','Cream','Beige','Sand','Sky blue','Light blue','Baby blue','Powder blue','Lemon','Mint'],
+   tips:['Linen and cotton only — nothing heavy or synthetic','Everything slightly relaxed — nothing structured or stiff','Roll sleeves and hems for a naturally lived-in look','Simple gold jewellery and a woven bag feel perfect','White or tan sandals tie the whole look together'],
+   names:['Sunday morning','Coastal drift','Harbour days','Linen season','Breezy afternoon']},
+  {id:'coquette',label:'🎀 Coquette',desc:'Soft, feminine, dreamy — bows, blush and silk',palette:['Baby pink','Powder pink','Blush pink','White','Lavender','Dusty rose','Lilac','Ivory','Rose gold'],
+   tips:['A bow detail is the signature coquette finishing touch','Soft floaty fabrics over anything stiff or structured','Layer two or three delicate necklaces together','Ballet flats or strappy kitten heels keep it feminine','Carry a small dainty bag — a mini or structured clutch'],
+   names:['Soft focus','Ballet core','Pink hour','Darling look','Sugar rush']},
+  {id:'oldmoney',label:'💎 Old money',desc:'Timeless, tailored, quiet luxury — no logos needed',palette:['Navy','Camel','Cream','Beige','Brown','White','Tan','Khaki','Ivory','Chocolate'],
+   tips:['Tailored fit is non-negotiable — nothing baggy or sloppy','Natural fabrics — wool, cashmere, silk, linen','Zero loud logos or prints — let the cut speak for itself','Simple gold jewellery only — a watch or thin chain','Loafers, ballet flats or clean leather shoes always'],
+   names:['Heritage look','Polo club','Quiet luxury','Club classic','Understated wealth']},
+  {id:'downtown',label:'🏙️ Downtown girl',desc:'Cool NYC energy — leather, coffee and effortless cool',palette:['Black','Brown','Chocolate','Camel','Tan','White','Grey','Charcoal','Burgundy','Wine'],
+   tips:['A leather jacket or blazer elevates literally everything','Ankle boots or loafers are the downtown shoe of choice','Carry a structured bag or roomy tote','Simple basics elevated by one statement accessory','Coffee and neutral tones with one dark anchor piece'],
+   names:['Downtown mood','Coffee run','East side','City girl','Concrete jungle']},
+  {id:'urbancore',label:'🔩 Urbancore',desc:'Industrial, utilitarian, dark and quietly functional',palette:['Black','Charcoal','Graphite','Grey','Olive','Khaki','Army green','Dark navy'],
+   tips:['Utility details — cargo pockets, zips, straps — are the point','Stay within one dark colour family per outfit','Layer different fabric textures: nylon, cotton, denim','Chunky technical shoes or boots anchor the look','Keep accessories minimal — nothing decorative'],
+   names:['City infrastructure','Functional fit','Urban grid','Concrete wave','System override']},
+  {id:'stargirl',label:'⭐ Stargirl',desc:'Dreamy, celestial, shimmer and soft wonder',palette:['Silver','Lavender','Baby blue','White','Soft lilac','Pale lavender','Ice blue','Thistle','Powder pink'],
+   tips:['Shimmer or metallic fabric is the stargirl signature','Layer star or moon jewellery — the more delicate the better','Floaty and ethereal always beats structured and stiff','Sparkle in one place only — bag, shoes or top','Dreamy pastels with one silver accent is the formula'],
+   names:['Celestial moment','Star light','Moon child','Galaxy glow','Shooting star']},
+  {id:'messyitgirl',label:'💋 Messy it girl',desc:'Effortlessly undone — nothing too perfect, everything intentional',palette:['Black','White','Grey','Charcoal','Brown','Burgundy','Olive','Denim'],
+   tips:['Nothing should look planned — that is the whole point','An oversized piece over something fitted underneath works every time','Half-tuck only — never fully tucked in','One deliberately bold or unexpected piece makes it feel intentional','Low-effort shoes — worn-in trainers or simple ankle boots'],
+   names:['Undone chic','Cool girl','Accidental outfit','Too cool','Off the cuff']},
+  {id:'romantic',label:'📖 Romantic academia',desc:'Literary, warm, softly scholarly and dreamy',palette:['Brown','Camel','Cream','Ivory','Burgundy','Wine','Dusty rose','Olive','Tan','Mocha'],
+   tips:['Layer a cardigan, knit or blazer over absolutely everything','Mix a warm floral with plaid or a textured knit','A structured leather tote or satchel is essential','Delicate jewellery — a thin chain or small pearl earrings','High-waisted skirts or tailored trousers feel most romantic academic'],
+   names:['Library hours','Soft study','Chapter one','Candlelight','Garden party']},
+  {id:'y2k',label:'⭐ Y2K',desc:'Low rise, bold colours, nostalgic 2000s energy',palette:['Hot pink','Baby blue','Purple','Yellow','Silver','Fuchsia','Turquoise','Candy pink'],
+   tips:['Low-rise waistband is the most Y2K silhouette you can wear','Crop everything — tops, cardigans, jackets, all of it','Mix metallics with bright colours and do not hold back','Chunky colourful jewellery and a tiny bag are essential','Tinted or wraparound sunglasses complete the whole era'],
+   names:['2004 throwback','Pop princess','Cyber babe','Digital age','Glitter era']},
+  {id:'boho',label:'🌿 Boho',desc:'Flowy, earthy, layered and completely free-spirited',palette:['Brown','Tan','Rust','Olive','Terracotta','Cream','Mustard','Apricot','Khaki','Sage'],
+   tips:['Layer multiple loose flowy pieces — nothing structured or rigid','Mix natural textures freely: linen, knit, suede, woven cotton','Earthy tones with one warm accent colour work every time','Stack bracelets and rings on both hands generously','Maxi skirts or wide flowy trousers are the silhouette'],
+   names:['Free spirit','Earth child','Festival mood','Wild garden','Wanderer']},
+  {id:'dark',label:'🖤 Dark academia',desc:'Moody, scholarly, deep tones and rich textures',palette:['Black','Charcoal','Brown','Chocolate','Burgundy','Wine','Navy','Olive','Mocha'],
+   tips:['A blazer or structured coat anchors every dark academia look','Mix plaid, tweed or herringbone with plain pieces for texture','Deep jewel tones — burgundy, forest green, navy — work together perfectly','A leather satchel or structured canvas bag is the bag','Chelsea boots or Oxford shoes are the only shoes you need'],
+   names:['Study hall','Autumn library','Candlewick','Midnight scholar','Gothic garden']},
+  {id:'sporty',label:'🏃 Sporty chic',desc:'Athletic meets polished — effortlessly active and elevated',palette:['Black','White','Grey','Navy','Olive','Cobalt blue'],
+   tips:['One tailored piece instantly elevates any athletic outfit','Monochrome sporty looks feel the most intentionally elevated','Clean white trainers are the most versatile sporty shoe','A structured bag balances the athletic silhouette beautifully','Minimal jewellery — a simple chain or small hoops only'],
+   names:['Active energy','Court side','Track to table','Sport luxe','Game day']},
+  {id:'preppy',label:'🎓 Preppy',desc:'Polished, classic and effortlessly collegiate',palette:['Navy','White','Red','Green','Yellow','Camel','Burgundy','Ivory'],
+   tips:['Always tuck your top in — at minimum a French tuck','Layer a fine-knit jumper over a collared shirt','Loafers or ballet flats are the preppy shoes','A leather belt and structured bag finish any preppy look','Stripe, check or argyle prints feel very on-point'],
+   names:['Class photo','Campus style','Ivy league','Weekend club','Academic chic']},
+  {id:'vintage',label:'🕰️ Vintage',desc:'Retro-inspired, nostalgic and full of character',palette:['Brown','Tan','Rust','Mustard','Olive','Burgundy','Terracotta','Mocha','Wine','Camel'],
+   tips:['One vintage hero piece leads — everything else can be modern','High-waisted silhouettes feel the most authentically retro','Warm earthy tones or a single bold vintage print works perfectly','Vintage-inspired accessories — a silk scarf, cat-eye sunnies, a beret','Wear it with confidence — vintage dressing is always intentional'],
+   names:['Retro Sunday','Thrift find','Past perfect','Nostalgia trip','Vintage chapter']},
 ];
 
 let inspoTab='shuffle', inspoStyle='my', inspoLoading=false;
@@ -922,9 +1035,19 @@ function buildOutfit(pool,existing=[]){
   const shoe=pool.filter(i=>SHO_TYPES.includes(i.subtype));
   const accs=pool.filter(i=>ACC_TYPES.includes(i.subtype));
   const outfit=[];
-  if(drss.length&&Math.random()>0.5){const d=pick(drss);if(d)outfit.push(d);}
-  else{const t=pick(tops);if(t)outfit.push(t);const b=pick(bots);if(b&&!outfit.find(x=>x.id===b.id))outfit.push(b);}
-  if(!outfit.length)return null;
+  if(drss.length&&Math.random()>0.6){
+    const d=pick(drss);if(d)outfit.push(d);
+  } else if(tops.length&&bots.length){
+    const t=pick(tops);if(t)outfit.push(t);
+    const b=pick(bots);if(b&&!outfit.find(x=>x.id===b.id))outfit.push(b);
+  } else if(drss.length){
+    const d=pick(drss);if(d)outfit.push(d);
+  }
+  // Must have dress OR top+bottom
+  const hasDressCore=outfit.some(i=>DRS_TYPES.includes(i.subtype||''));
+  const hasTopCore=outfit.some(i=>TOP_TYPES.includes(i.subtype||''));
+  const hasBotCore=outfit.some(i=>BOT_TYPES.includes(i.subtype||''));
+  if(!hasDressCore&&!(hasTopCore&&hasBotCore))return null;
   if(outs.length&&Math.random()>0.6){const o=pick(outs);if(o&&!outfit.find(x=>x.id===o.id))outfit.push(o);}
   if(shoe.length){const s=pick(shoe);if(s&&!outfit.find(x=>x.id===s.id))outfit.push(s);}
   if(accs.length&&Math.random()>0.5){const a=pick(accs);if(a&&!outfit.find(x=>x.id===a.id))outfit.push(a);}
@@ -1015,7 +1138,7 @@ function selectStyle(id){
 function getOutfitTip(outfit, styleInfo){
   const types=outfit.map(i=>i.subtype||'');
   const colors=outfit.map(i=>i.color||'').filter(Boolean);
-  const brands=outfit.map(i=>i.brand||'').filter(Boolean);
+  const fits=outfit.map(i=>i.fit||'').filter(Boolean);
   const hasTop=types.some(t=>TOP_TYPES.includes(t));
   const hasBot=types.some(t=>BOT_TYPES.includes(t));
   const hasOuter=types.some(t=>OUT_TYPES.includes(t));
@@ -1024,66 +1147,75 @@ function getOutfitTip(outfit, styleInfo){
   const hasAcc=types.some(t=>ACC_TYPES.includes(t));
   const uniqueColors=[...new Set(colors)];
   const isMonochrome=uniqueColors.length===1;
-  const colorStr=uniqueColors.slice(0,2).join(' and ');
   const sid=styleInfo.id;
-
   const tips=[];
 
-  // Outfit-specific structural tips
+  // Structure tip — specific to what is in this outfit
   if(hasTop&&hasBot&&!hasOuter){
-    const tuckedStyles=['minimal','oldmoney','preppy','romantic'];
-    if(tuckedStyles.includes(sid))tips.push('Tuck your top fully for a polished, put-together finish');
-    else if(sid==='messyitgirl')tips.push('Half-tuck your top — intentionally undone is the vibe');
-    else if(sid==='streetwear'||sid==='urbancore')tips.push('Leave your top untucked and let it hang loose');
-    else tips.push('Try a half-tuck to break up the silhouette');
+    if(['minimal','oldmoney','preppy','romantic'].includes(sid))tips.push('Tuck your top in fully — a clean tuck elevates this combination instantly');
+    else if(sid==='messyitgirl')tips.push('Half-tuck only — one side in, one side out, nothing too neat');
+    else if(sid==='streetwear'||sid==='urbancore')tips.push('Leave it untucked and let the layers fall naturally');
+    else if(sid==='coquette'||sid==='stargirl')tips.push('Try a loose front tuck to keep the feminine shape without being too structured');
+    else tips.push('A half-tuck adds shape without effort — tuck just the front of the top');
   }
   if(hasOuter){
-    if(sid==='downtown'||sid==='messyitgirl')tips.push('Leave the outer layer open and slightly pushed off the shoulders');
-    else if(sid==='oldmoney'||sid==='preppy')tips.push('Button up the outer layer — clean and structured wins here');
-    else if(sid==='dark'||sid==='romantic')tips.push('Layer the outer piece over a shirt collar peeking out at the neck');
-    else tips.push('Try wearing it open over the outfit for an effortless layer');
+    if(sid==='downtown'||sid==='messyitgirl')tips.push('Wear the outer layer open — push it slightly off the shoulders for maximum effect');
+    else if(sid==='oldmoney'||sid==='preppy')tips.push('Fasten one or two buttons on the outer layer — structured and intentional');
+    else if(sid==='dark'||sid==='romantic')tips.push('Layer the outer piece so the collar or neck of the item underneath peeks out');
+    else if(sid==='streetwear')tips.push('Keep it fully open or drape it off one shoulder — nothing buttoned up');
+    else tips.push('Open layering feels effortless — button only if the weather calls for it');
   }
   if(hasDress&&!hasOuter){
-    if(sid==='coquette'||sid==='stargirl')tips.push('Add a thin belt at the waist to define your silhouette');
-    else if(sid==='boho')tips.push('Add a wide braided belt to break up the flow');
-    else tips.push('Keep accessories minimal — let the dress lead');
+    if(sid==='coquette'||sid==='stargirl')tips.push('A thin ribbon or delicate belt at the waist adds shape and feels on-brand');
+    else if(sid==='boho')tips.push('A wide woven or leather belt breaks the dress into two proportions beautifully');
+    else if(sid==='minimal')tips.push('Nothing added — let the dress silhouette be the whole statement');
+    else tips.push('Let the dress lead and keep everything else simple');
   }
 
-  // Colour-specific tips
+  // Fit-based tip
+  const hasOversized=fits.some(f=>['Oversized','Baggy','Loose'].includes(f));
+  const hasFitted=fits.some(f=>['Fitted','Tight','Skin tight'].includes(f));
+  if(hasOversized&&hasFitted)tips.push('The contrast between the fitted and oversized pieces is doing the work here — keep it');
+  else if(hasOversized&&outfit.length>=2)tips.push('Both pieces are relaxed — define your waist with a belt or a simple tuck');
+
+  // Colour tip
   if(isMonochrome&&uniqueColors[0]){
-    tips.push(`Full ${colors[0]} works — vary the textures to keep it interesting`);
+    tips.push(`Head-to-toe ${uniqueColors[0].toLowerCase()} works — add a different texture to stop it feeling flat`);
   } else if(uniqueColors.length>=2){
-    const dark=['Black','Charcoal','Navy','Burgundy','Brown','Dark green'];
-    const light=['White','Cream','Beige','Ivory','Off-white'];
-    const hasDark=uniqueColors.some(c=>dark.includes(c));
-    const hasLight=uniqueColors.some(c=>light.includes(c));
-    if(hasDark&&hasLight)tips.push(`The ${colorStr} contrast is strong — keep accessories in one of these tones`);
-    else tips.push(`${colorStr} complement each other well — lean into the combination`);
+    const neutrals=['White','Cream','Beige','Ivory','Off-white','Black','Grey','Charcoal','Sand','Stone','Camel','Tan'];
+    const allNeutral=uniqueColors.every(c=>neutrals.includes(c));
+    if(allNeutral)tips.push('All-neutral palette — one accessory in a contrasting texture will give the look a focal point');
+    else{
+      const c1=uniqueColors[0],c2=uniqueColors[1];
+      tips.push(`${c1} and ${c2} together — keep your shoes and bag in one of these tones to tie everything in`);
+    }
   }
 
-  // Footwear tips
+  // Footwear tip — specific to the shoe or a missing shoe
   if(hasShoe){
     const shoe=outfit.find(i=>SHO_TYPES.includes(i.subtype||''));
     if(shoe){
-      if(['Sneakers'].includes(shoe.subtype)&&(sid==='oldmoney'||sid==='preppy'))tips.push(`Swap the sneakers for loafers or clean leather shoes to fully nail the ${styleInfo.label.replace(/[^\w\s]/g,'').trim()} look`);
-      else if(['Heels'].includes(shoe.subtype)&&sid==='streetwear')tips.push('Heels with streetwear is a power move — keep the rest of the outfit relaxed');
-      else if(['Boots','Ankle boots'].includes(shoe.subtype))tips.push('Boots ground the whole outfit — tuck trousers in or roll them up to show them off');
+      const sub=shoe.subtype;
+      if(sub==='Sneakers'&&['oldmoney','preppy','romantic','dark'].includes(sid))
+        tips.push(`The sneakers work but loafers or Chelsea boots would push this look further into ${styleInfo.label.replace(/[✨🤍🧢🌊🎀💎🏙️🔩⭐💋📖🌿🖤🏃🎓🕰️]/u,'').trim()}`);
+      else if(['Boots','Ankle boots'].includes(sub))
+        tips.push('Tuck your trousers into the boots or roll them to the ankle to really show them off');
+      else if(sub==='Heels'&&sid==='streetwear')
+        tips.push('Heels with streetwear is a bold move — make sure the rest of the outfit is relaxed to balance it');
+      else if(sub==='Sandals'&&['dark','downtown','urbancore'].includes(sid))
+        tips.push('Sandals lighten this look — swap for boots or loafers to keep the mood consistent');
     }
   } else {
-    // Missing shoes suggestion
-    const shoeSuggestions={minimal:'Clean white trainers or simple ballet flats',oldmoney:'Loafers or leather Oxford shoes',streetwear:'Chunky trainers or high-top sneakers',coquette:'Ballet flats or strappy kitten heels',dark:'Chelsea boots or chunky platform boots',downtown:'Combat boots or pointed-toe ankle boots',boho:'Strappy sandals or tan ankle boots',stargirl:'Silver sandals or sparkly flats',romantic:'Mary Janes or block-heeled boots',messyitgirl:'Beat-up trainers or simple ankle boots',coastal:'White sandals or espadrilles'};
-    const sug=shoeSuggestions[sid]||'Shoes that match your colour palette';
-    tips.push(`Complete the look with: ${sug}`);
+    const shoeSug={my:'Shoes that feel right — trust your instinct',minimal:'Clean white trainers or simple black flats',oldmoney:'Loafers or leather pointed-toe flats',streetwear:'Chunky trainers or high-top sneakers',coquette:'Ballet flats or strappy kitten heels',dark:'Chelsea boots or platform leather boots',downtown:'Ankle boots or pointed loafers',boho:'Strappy leather sandals or tan ankle boots',stargirl:'Metallic sandals or silver-toned flats',romantic:'Mary Janes or block-heeled ankle boots',messyitgirl:'Worn-in trainers or simple ankle boots',coastal:'White leather sandals or espadrilles',y2k:'Platform boots or chunky colourful trainers',sporty:'Clean white trainers or low-profile sneakers',preppy:'Loafers or clean leather ballet flats',vintage:'Block-heeled boots or retro-style trainers',urbancore:'Chunky technical boots or platform sneakers'}[sid]||'Shoes in a neutral tone to ground the look';
+    tips.push(`Finish with: ${shoeSug}`);
   }
 
-  // Accessories tip
+  // Accessories tip — only if none in the outfit
   if(!hasAcc){
-    const accSuggestions={minimal:'One simple gold ring or stud earrings — nothing more',oldmoney:'A structured leather bag and a watch',coquette:'A bow hair clip and a dainty necklace',stargirl:'Star or moon jewellery layered together',dark:'A structured leather satchel or canvas tote',downtown:'A shoulder bag and simple gold hoops',boho:'Stacked bracelets and a woven bag',y2k:'Chunky colourful jewellery and a mini bag',preppy:'A belt and a structured handbag',romantic:'A delicate necklace and a tote bag',streetwear:'A cap or beanie and a crossbody bag'};
-    const sug=accSuggestions[sid]||'An accessory to tie the look together';
-    tips.push(`Accessories to add: ${sug}`);
+    const accSug={my:'One accessory that feels like you',minimal:'One fine gold ring or small studs — nothing more',oldmoney:'A structured leather bag and a watch or thin gold chain',coquette:'A bow clip and a layered dainty necklace',stargirl:'Layered star or moon jewellery and a sparkly bag',dark:'A structured leather satchel or dark canvas tote',downtown:'A shoulder bag and simple gold hoops',boho:'Stacked bracelets, rings and a woven bag',y2k:'Chunky colourful jewellery and a tiny logo bag',preppy:'A leather belt and a structured handbag',romantic:'A delicate pendant necklace and a tote or satchel',streetwear:'A crossbody bag and a cap or beanie',sporty:'A minimal sports watch or small crossbody',coastal:'A wicker bag or simple tote and a gold bracelet',vintage:'A silk scarf, a beret or cat-eye sunglasses',urbancore:'One functional bag — a belt bag or minimal backpack'}[sid]||'One accessory to give the look a focal point';
+    tips.push(`Add: ${accSug}`);
   }
 
-  // Return 2 most relevant tips
   return tips.slice(0,2);
 }
 
@@ -1155,37 +1287,48 @@ function genStyleOutfits(){
 
   const usedIds=new Set();
   const outfits=[];
-  for(let attempt=0;attempt<8&&outfits.length<3;attempt++){
+  for(let attempt=0;attempt<12&&outfits.length<3;attempt++){
     const outfit=[];
     const avail=arr=>arr.filter(i=>!usedIds.has(i.id));
 
-    if(avail(drss).length&&(styleInfo.id==='coquette'||styleInfo.id==='boho'||styleInfo.id==='romantic')&&Math.random()>0.4){
+    // Core is always: dress/jumpsuit OR top+bottom — non-negotiable
+    const dressChance={coquette:0.6,boho:0.55,romantic:0.55,stargirl:0.4,vintage:0.4,coastal:0.35}[styleInfo.id]||0.25;
+    const hasDressAvail=avail(drss).length>0;
+    const hasTopAvail=avail(tops).length>0;
+    const hasBotAvail=avail(bots).length>0;
+
+    if(hasDressAvail&&Math.random()<dressChance){
       const d=pickBest(avail(drss));if(d)outfit.push(d);
-    } else if(avail(drss).length&&Math.random()>0.65){
-      const d=pickBest(avail(drss));if(d)outfit.push(d);
-    } else {
+    } else if(hasTopAvail&&hasBotAvail){
       const t=pickBest(avail(tops));if(t)outfit.push(t);
       const b=pickBest(avail(bots));if(b&&!outfit.find(x=>x.id===b.id))outfit.push(b);
+    } else if(hasDressAvail){
+      const d=pickBest(avail(drss));if(d)outfit.push(d);
+    } else {
+      continue; // no valid core — skip this attempt
     }
-    if(!outfit.length)continue;
 
-    // Outerwear: more likely for dark, old money, downtown, romantic
+    // Validate: must have dress OR (top AND bottom)
+    const hasDressCore=outfit.some(i=>DRS_TYPES.includes(i.subtype||''));
+    const hasTopCore=outfit.some(i=>TOP_TYPES.includes(i.subtype||''));
+    const hasBotCore=outfit.some(i=>BOT_TYPES.includes(i.subtype||''));
+    if(!hasDressCore&&!(hasTopCore&&hasBotCore))continue;
+
+    // Outerwear
     const outerChance={'dark':0.7,'oldmoney':0.6,'downtown':0.65,'romantic':0.55,'preppy':0.6}[styleInfo.id]||0.35;
     if(avail(outs).length&&Math.random()<outerChance){
       const o=pickBest(avail(outs));if(o&&!outfit.find(x=>x.id===o.id))outfit.push(o);
     }
     if(avail(shoe).length){const s=pickBest(avail(shoe));if(s&&!outfit.find(x=>x.id===s.id))outfit.push(s);}
 
-    // Accessories: more for coquette, boho, stargirl, y2k
+    // Accessories
     const accChance={'coquette':0.8,'boho':0.75,'stargirl':0.8,'y2k':0.75,'oldmoney':0.65,'preppy':0.6}[styleInfo.id]||0.4;
     if(avail(accs).length&&Math.random()<accChance){
       const a=pickBest(avail(accs));if(a&&!outfit.find(x=>x.id===a.id))outfit.push(a);
     }
 
-    if(outfit.length>=2){
-      outfits.push(outfit);
-      outfit.forEach(i=>usedIds.add(i.id));
-    }
+    outfits.push(outfit);
+    outfit.forEach(i=>usedIds.add(i.id));
   }
 
   if(!outfits.length){
