@@ -4,35 +4,40 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Wardrobe</title>
-<script type="module">
-import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import{getAuth,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import{getFirestore,doc,collection,setDoc,deleteDoc,onSnapshot,writeBatch}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+function gi(id){return document.getElementById(id);}
+
 const firebaseConfig={apiKey:"AIzaSyBHpwQJUxvwMTwXvrwAFyuGydOM7EqCBhw",authDomain:"wardrobe-sjw.firebaseapp.com",projectId:"wardrobe-sjw",storageBucket:"wardrobe-sjw.firebasestorage.app",messagingSenderId:"2487840884",appId:"1:2487840884:web:29f2bf8177a558736de121"};
-const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth(),db=firebase.firestore();
 let _uid=null,_uns=[];
-window._fbOut=()=>signOut(auth);
-window.doLogin=async()=>{const e=gi('au-e').value.trim(),p=gi('au-p').value,err=gi('au-err');err.textContent='';try{await signInWithEmailAndPassword(auth,e,p);}catch(x){err.textContent=fe(x.code);}};
-window.doSignup=async()=>{const e=gi('au-e').value.trim(),p=gi('au-p').value,err=gi('au-err');err.textContent='';if(p.length<6){err.textContent='Password must be 6+ characters.';return;}try{await createUserWithEmailAndPassword(auth,e,p);}catch(x){err.textContent=fe(x.code);}};
+window._fbOut=()=>auth.signOut();
+window.doLogin=async()=>{const e=gi('au-e').value.trim(),p=gi('au-p').value,err=gi('au-err');err.textContent='';try{await auth.signInWithEmailAndPassword(e,p);}catch(x){err.textContent=fe(x.code);}};
+window.doSignup=async()=>{const e=gi('au-e').value.trim(),p=gi('au-p').value,err=gi('au-err');err.textContent='';if(p.length<6){err.textContent='Password must be 6+ characters.';return;}try{await auth.createUserWithEmailAndPassword(e,p);}catch(x){err.textContent=fe(x.code);}};
 function fe(c){return({'auth/invalid-email':'Invalid email.','auth/user-not-found':'No account found.','auth/wrong-password':'Wrong password.','auth/email-already-in-use':'Email already in use.','auth/invalid-credential':'Email or password incorrect.'})[c]||'Something went wrong.';}
-onAuthStateChanged(auth,user=>{
-  if(user){_uid=user.uid;gi('auth-screen').style.display='none';gi('app').style.display='flex';gi('u-email').textContent=user.email;startListeners();}
-  else{_uid=null;_uns.forEach(u=>u());_uns=[];gi('auth-screen').style.display='flex';gi('app').style.display='none';}
+document.addEventListener('DOMContentLoaded',()=>{
+  auth.onAuthStateChanged(user=>{
+    if(user){_uid=user.uid;gi('auth-screen').style.display='none';gi('app').style.display='flex';gi('u-email').textContent=user.email;startListeners();}
+    else{_uid=null;_uns.forEach(u=>u());_uns=[];gi('auth-screen').style.display='flex';gi('app').style.display='none';}
+  });
 });
 function startListeners(){
   _uns.forEach(u=>u());_uns=[];
   let loaded={items:false,outfits:false,wishlist:false,ideas:false,cats:false};
-  function chk(){if(Object.values(loaded).every(Boolean)){updateBadges();renderCurrent();}}
-  const sub=(col,fn,key)=>onSnapshot(collection(db,'users',_uid,col),snap=>{fn(snap.docs.map(d=>d.data()));if(!loaded[key]){loaded[key]=true;chk();}else updateBadges();});
+  function chk(){if(Object.values(loaded).every(Boolean)){window._dataReady=true;[50,200,500,1000,2000].forEach(ms=>setTimeout(()=>{if(typeof renderCurrent==='function'&&typeof updateBadges==='function'){updateBadges();renderCurrent();}},ms));}}
+  const sub=(col,fn,key)=>db.collection('users').doc(_uid).collection(col).onSnapshot(snap=>{fn(snap.docs.map(d=>d.data()));if(!loaded[key]){loaded[key]=true;chk();}else if(typeof updateBadges==='function')updateBadges();});
   _uns.push(sub('items',d=>{items=d;},'items'));
   _uns.push(sub('outfits',d=>{outfits=d;},'outfits'));
   _uns.push(sub('wishlist',d=>{wishlist=d;},'wishlist'));
   _uns.push(sub('ideas',d=>{ideas=d;},'ideas'));
   _uns.push(sub('cats',d=>{cats=d;if(!cats.length)seedCats();},'cats'));
 }
-async function seedCats(){const b=writeBatch(db);DEFAULT_CATS.forEach(c=>b.set(doc(db,'users',_uid,'cats',c.id),c));await b.commit();}
-window.fbSave=async(col,item)=>{if(!_uid)return;syncDot('sy');try{const cl={};for(const[k,v]of Object.entries(item)){if(v===undefined||v===null)continue;cl[k]=Array.isArray(v)?v.filter(x=>x!=null):v;}await setDoc(doc(db,'users',_uid,col,item.id),cl);syncDot('ok');}catch(e){syncDot('er');console.error(e);}};
-window.fbDel=async(col,id)=>{if(!_uid)return;try{await deleteDoc(doc(db,'users',_uid,col,id));}catch(e){console.error(e);}};
+async function seedCats(){const b=db.batch();DEFAULT_CATS.forEach(c=>b.set(db.collection('users').doc(_uid).collection('cats').doc(c.id),c));await b.commit();}
+window.fbSave=async(col,item)=>{if(!_uid)return;syncDot('sy');try{const cl={};for(const[k,v]of Object.entries(item)){if(v===undefined||v===null)continue;cl[k]=Array.isArray(v)?v.filter(x=>x!=null):v;}await db.collection('users').doc(_uid).collection(col).doc(item.id).set(cl);syncDot('ok');}catch(e){syncDot('er');console.error(e);}};
+window.fbDel=async(col,id)=>{if(!_uid)return;try{await db.collection('users').doc(_uid).collection(col).doc(id).delete();}catch(e){console.error(e);}};
 </script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap');
@@ -256,6 +261,8 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
       <span class="nl">Analyse</span>
       <button class="nb" id="nav-stats" onclick="nav('stats')"><span class="ni">📊</span>Insights</button>
       <button class="nb" id="nav-calendar" onclick="nav('calendar')"><span class="ni">📅</span>Wear calendar</button>
+      <button class="nb" id="nav-glossary" onclick="nav('glossary')"><span class="ni">📖</span>Style glossary</button>
+      <button class="nb" id="nav-packing" onclick="nav('packing')"><span class="ni">🧳</span>Packing list</button>
     </div>
     <div class="ns">
       <span class="nl">Manage</span>
@@ -298,6 +305,8 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
   <button class="mbtn" onclick="nav('inspo');closeMore()"><span style="font-size:18px">✨</span>Outfit inspo</button>
   <button class="mbtn" onclick="nav('stats');closeMore()"><span style="font-size:18px">📊</span>Insights</button>
   <button class="mbtn" onclick="nav('calendar');closeMore()"><span style="font-size:18px">📅</span>Wear calendar</button>
+  <button class="mbtn" onclick="nav('glossary');closeMore()"><span style="font-size:18px">📖</span>Style glossary</button>
+  <button class="mbtn" onclick="nav('packing');closeMore()"><span style="font-size:18px">🧳</span>Packing list</button>
   <button class="mbtn" onclick="nav('settings');closeMore()"><span style="font-size:18px">⚙️</span>Settings</button>
   <button class="mbtn" onclick="window._fbOut();closeMore()"><span style="font-size:18px">🚪</span>Sign out</button>
 </div>
@@ -325,6 +334,29 @@ async function uploadPhotos(files){
 
 // ── DATA ──────────────────────────────────────────────────────────────────────
 let items=[],outfits=[],cats=[],wishlist=[],ideas=[];
+const CURRENCIES=[
+  {code:'GBP',sym:'£',name:'British Pound'},{code:'EUR',sym:'€',name:'Euro'},
+  {code:'USD',sym:'$',name:'US Dollar'},{code:'DKK',sym:'Kr',name:'Danish Krone'},
+  {code:'SEK',sym:'kr',name:'Swedish Krona'},{code:'NOK',sym:'kr',name:'Norwegian Krone'},
+  {code:'CHF',sym:'Fr',name:'Swiss Franc'},{code:'JPY',sym:'¥',name:'Japanese Yen'},
+  {code:'AUD',sym:'A$',name:'Australian Dollar'},{code:'CAD',sym:'C$',name:'Canadian Dollar'},
+  {code:'KRW',sym:'₩',name:'Korean Won'},{code:'INR',sym:'₹',name:'Indian Rupee'},
+];
+let userCurrency=localStorage.getItem('wrd_currency')||'GBP';
+function getCurrencySym(){return CURRENCIES.find(c=>c.code===userCurrency)?.sym||'£';}
+function saveCurrency(code){userCurrency=code;localStorage.setItem('wrd_currency',code);showToast('Currency updated!');}
+function parsePrice(str){
+  if(!str)return 0;
+  const s=String(str).trim().replace(/[^\d.,]/g,'').replace(',','.');
+  return parseFloat(s)||0;
+}
+function fmtPrice(priceStr){
+  if(!priceStr)return '—';
+  const num=parsePrice(priceStr);
+  if(!num)return String(priceStr);
+  const sym=getCurrencySym();
+  return ['Kr','kr','Fr'].includes(sym)?num.toLocaleString()+' '+sym:sym+num.toLocaleString();
+}
 let view='all',gmode='grid';
 let eItemId=null,vItemId=null,eOutfitId=null,eCatId=null,eIdeaId=null;
 let selOut=new Set(),piPhotos=[],poPhotos=[];
@@ -488,6 +520,8 @@ function renderCurrent(){
   else if(view==='stats')rStats();
   else if(view==='calendar')rCal();
   else if(view==='settings')rSettings();
+  else if(view==='glossary')rGlossary();
+  else if(view==='packing')rPacking();
 }
 function toggleSidebar(){gi('sidebar').classList.toggle('open');gi('sov').classList.toggle('open');}
 function closeSidebar(){gi('sidebar').classList.remove('open');gi('sov').classList.remove('open');}
@@ -575,7 +609,7 @@ function openDetail(id){
     <div class="mb">
       ${photos.length?`<div style="display:grid;grid-template-columns:${photos.length>1?'1fr 1fr':'1fr'};gap:6px;margin-bottom:13px">${photos.map(p=>`<img src="${p}" style="width:100%;border-radius:10px;display:block;${photos.length>1?'height:140px;object-fit:cover':''}">`).join('')}</div>`:''}
       <div style="height:80px;border-radius:10px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:32px;border:1px solid rgba(0,0,0,.07);margin-bottom:13px">${cat.icon||'👕'}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 16px;margin-bottom:12px">${[['Category',cat.name],['Type',item.subtype||'—'],['Brand',item.brand||'—'],['Color',item.color||'—'],['Size',item.size||'—'],['Fit',item.fit||'—'],['Season',item.season||'—'],['Style',item.occasion||'—'],['Material',item.material||'—'],['Condition',item.condition||'—'],['Price paid',item.price||'—'],['Store',item.store||'—'],['Purchased',item.purchaseDate||'—'],['Care',item.care||'—'],['Worn in outfits',wornIn],['Total wears',item.wornCount||0]].map(([l,v])=>`<div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">${l}</div><div style="font-size:13px;font-weight:500">${v}</div></div>`).join('')}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 16px;margin-bottom:12px">${[['Category',cat.name],['Type',item.subtype||'—'],['Brand',item.brand||'—'],['Color',item.color||'—'],['Size',item.size||'—'],['Fit',item.fit||'—'],['Season',item.season||'—'],['Style',item.occasion||'—'],['Material',item.material||'—'],['Condition',item.condition||'—'],['Price paid',item.price?fmtPrice(item.price):'—'],['Store',item.store||'—'],['Purchased',item.purchaseDate||'—'],['Care',item.care||'—'],['Worn in outfits',wornIn],['Total wears',item.wornCount||0]].map(([l,v])=>`<div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">${l}</div><div style="font-size:13px;font-weight:500">${v}</div></div>`).join('')}</div>
       ${(item.tags||[]).length?`<div class="tgs" style="margin-bottom:9px">${item.tags.map(t=>`<span class="tg">${t}</span>`).join('')}</div>`:''}
       ${item.notes?`<p style="font-size:13px;color:var(--text2);line-height:1.65">${item.notes}</p>`:''}
     </div>
@@ -627,7 +661,7 @@ function openAddItem(id=null){
         <div class="fr"><label>Condition</label><select class="sel" id="f-cond"><option>New</option><option>Like new</option><option>Good</option><option>Fair</option><option>Worn</option></select></div>
       </div>
       <div class="g2">
-        <div class="fr"><label>Price paid</label><input class="inp" id="f-price" placeholder="e.g. £45" value="${item?.price||''}"></div>
+        <div class="fr"><label>Price paid</label><input class="inp" id="f-price" placeholder="e.g. 45" id="f-price" value="${item?.price?String(item.price).replace(/[^0-9.]/g,''):''}">></div>
         <div class="fr"><label>Purchase date</label><input class="inp" type="date" id="f-pd" value="${item?.purchaseDate||''}"></div>
       </div>
       <div class="g2">
@@ -1403,19 +1437,24 @@ function rStats(){
   const agg=k=>items.reduce((a,i)=>{const v=i[k]||'Unknown';a[v]=(a[v]||0)+1;return a;},{});
   const cAgg=items.reduce((a,i)=>{const c=cats.find(x=>x.id===i.category);const k=c?c.name:'Unknown';a[k]=(a[k]||0)+1;return a;},{});
   const tw=items.filter(i=>i.wornCount).sort((a,b)=>(b.wornCount||0)-(a.wornCount||0)).slice(0,8);
-  const prs=items.map(i=>parseFloat((i.price||'').replace(/[^0-9.]/g,'')||0)).filter(p=>p>0);
+  const prs=items.map(i=>parsePrice(i.price||'')).filter(p=>p>0);
   const ap=prs.length?Math.round(prs.reduce((a,b)=>a+b,0)/prs.length):null;
-  const sym=items.find(i=>i.price)?.price?.replace(/[\d.,\s]/g,'')||'£';
+  const totalVal=prs.length?prs.reduce((a,b)=>a+b,0):null;
+  const sym=getCurrencySym();
+  const fmtSym=n=>(['Kr','kr'].includes(sym)?n.toLocaleString()+' '+sym:sym+n.toLocaleString());
   function ch(ti,obj,col){const s=Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,7);const mx=Math.max(...s.map(x=>x[1]),1);return`<div class="cb"><div class="ct">${ti}</div>${s.map(([k,v])=>`<div class="br"><div class="bl">${k}</div><div class="bt"><div class="bf" style="width:${Math.round(v/mx*100)}%;background:${col}"></div></div><div class="bc">${v}</div></div>`).join('')}</div>`;}
-  sCt(`<div class="sw2">${[['Items',items.length],['Outfits',outfits.length],['Ideas',ideas.length],['Times worn',items.reduce((a,i)=>a+(i.wornCount||0),0)],['Brands',[...new Set(items.map(i=>i.brand).filter(Boolean))].length],ap?['Avg price',`${sym}${ap}`]:null].filter(Boolean).map(([l,v])=>`<div class="stb"><div class="stl">${l}</div><div class="stv">${v}</div></div>`).join('')}</div><div class="charts">${ch('By category',cAgg,'#1a1705')}${ch('By color',agg('color'),'#D85A30')}${ch('By season',agg('season'),'#3B6D11')}${ch('By style',agg('occasion'),'#7B1FA2')}${ch('By condition',agg('condition'),'#185FA5')}${ch('By brand',agg('brand'),'#C9A72A')}</div>${tw.length?`<div class="cb"><div class="ct">Most worn</div>${tw.map(i=>`<div class="br"><div class="bl" style="width:120px">${i.name}</div><div class="bt"><div class="bf" style="width:${Math.round((i.wornCount||0)/tw[0].wornCount*100)}%;background:#378ADD"></div></div><div class="bc">${i.wornCount}</div></div>`).join('')}</div>`:''}`);
+  sCt(`<div class="sw2">${[['Items',items.length],['Outfits',outfits.length],['Ideas',ideas.length],['Times worn',items.reduce((a,i)=>a+(i.wornCount||0),0)],['Brands',[...new Set(items.map(i=>i.brand).filter(Boolean))].length],ap?['Avg price',fmtSym(ap)]:null,totalVal?['Total value',fmtSym(Math.round(totalVal))]:null].filter(Boolean).map(([l,v])=>`<div class="stb"><div class="stl">${l}</div><div class="stv">${v}</div></div>`).join('')}</div><div class="charts">${ch('By category',cAgg,'#1a1705')}${ch('By color',agg('color'),'#D85A30')}${ch('By season',agg('season'),'#3B6D11')}${ch('By style',agg('occasion'),'#7B1FA2')}${ch('By condition',agg('condition'),'#185FA5')}${ch('By brand',agg('brand'),'#C9A72A')}</div>${tw.length?`<div class="cb"><div class="ct">Most worn</div>${tw.map(i=>`<div class="br"><div class="bl" style="width:120px">${i.name}</div><div class="bt"><div class="bf" style="width:${Math.round((i.wornCount||0)/tw[0].wornCount*100)}%;background:#378ADD"></div></div><div class="bc">${i.wornCount}</div></div>`).join('')}</div>`:''}`);
 }
 
 // ── SETTINGS ──────────────────────────────────────────────────────────────────
 function rSettings(){
+  // currency now saved via saveCurrency()
+
   sCH(`<div class="ch"><div class="cht">Settings</div><div class="chs">Manage your wardrobe</div></div>`);sFB('');
   sCt(`<div class="ss"><div class="st">Categories</div>${cats.map(c=>`<div class="ci"><span style="font-size:19px">${c.icon||'📁'}</span><span style="flex:1;font-size:13px">${c.name}</span><span style="font-size:11px;color:var(--text3);margin-right:8px">${items.filter(i=>i.category===c.id).length} items</span><button class="btn sm" onclick="openEditCat('${c.id}')">Edit</button></div>`).join('')}<div style="padding:9px 15px"><button class="btn sm" onclick="openAddCat()">+ Add category</button></div></div>
   <div class="ss"><div class="st">Account</div><div class="sr"><label class="sl">Signed in as <span style="color:var(--text3);font-size:11px" id="settings-email"></span></label><button class="btn sm dn" onclick="window._fbOut()">Sign out</button></div></div>
-  <div class="ss"><div class="st">Storage</div><div class="sr"><label class="sl">Cloud sync via Firebase + Cloudinary for photos <span style="font-size:11px;color:var(--text3)">— syncs across all devices</span></label></div><div class="sr"><label class="sl" style="font-size:11px;color:var(--text3)">${items.length} items · ${outfits.length} outfits · ${ideas.length} ideas · ${wishlist.length} wishlist · ${cats.length} categories</label></div></div>`);
+  <div class="ss"><div class="st">Storage</div><div class="sr"><label class="sl">Cloud sync via Firebase + Cloudinary for photos <span style="font-size:11px;color:var(--text3)">— syncs across all devices</span></label></div><div class="sr"><label class="sl" style="font-size:11px;color:var(--text3)">${items.length} items · ${outfits.length} outfits · ${ideas.length} ideas · ${wishlist.length} wishlist · ${cats.length} categories</label></div></div>
+  <div class="ss"><div class="st">Currency</div><div class="sr"><label class="sl">Choose your currency for prices and insights</label><select class="fsel" id="cur-sel" onchange="saveCurrency(this.value)" style="height:32px;font-size:13px">${CURRENCIES.map(c=>`<option value="${c.code}" ${userCurrency===c.code?'selected':''}>${c.sym} — ${c.name}</option>`).join('')}</select></div></div>`);
   setTimeout(()=>{const e=gi('settings-email');if(e)e.textContent=gi('u-email')?.textContent||'';},50);
 }
 
@@ -1434,7 +1473,394 @@ function delCat(){if(!eCatId||!confirm('Delete this category?'))return;const id=
 function mkModal(id){const el=document.createElement('div');el.className='ov';el.id=id;el.style.display='none';document.body.appendChild(el);return el;}
 let _tt;
 function showToast(msg){const el=gi('toast');el.textContent=msg;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2400);}
+if(window._dataReady&&typeof renderCurrent==='function'){updateBadges();renderCurrent();}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.ov').forEach(o=>o.style.display='none');closeSidebar();closeMore();}});
+
+function rGlossary(){
+  sCH(`<div class="ch"><div class="cht">📖 Style glossary</div><div class="chs">Descriptions for all types of clothing and accessories</div></div>`);
+  sFB('');
+  const sections=[('👕 Tops', 'T-shirt: A casual short-sleeved top, usually cotton. | Crop top: A top that ends above the waist. | Tank top: A sleeveless top with shoulder straps. | Cami: A thin-strapped top, often with lace or satin. | Bodysuit: A one-piece top that snaps at the crotch. | Blouse: A loose, often dressy top for women. | Shirt: A structured top with a collar and buttons. | Polo shirt: A collar top with a short button placket. | Henley: A collarless top with a small button placket. | Hoodie: A sweatshirt with a hood. | Corset top: A structured boned top that cinches the waist. | Halter top: A top tied or fastened behind the neck. | Wrap top: A top that wraps and ties at the waist. | Off-shoulder top: A top that sits below the shoulders. | Tube top: A strapless top that stretches across the chest.'), ('🧥 Outerwear', 'Jacket: A short outer garment. | Coat: A long outer garment for warmth. | Blazer: A structured jacket, often worn formally. | Trench coat: A belted, water-resistant long coat. | Puffer jacket: An insulated quilted jacket. | Leather jacket: A jacket made of real or faux leather. | Bomber jacket: A short, zip-up jacket with ribbed cuffs. | Denim jacket: A casual jacket made from denim fabric. | Shearling jacket: A jacket lined with sheepskin or faux shearling. | Windbreaker: A lightweight, wind-resistant jacket. | Cape: A sleeveless outer garment that drapes over the shoulders. | Gilet: A sleeveless padded jacket.'), ('👖 Bottoms', 'Jeans: Trousers made from denim. | Trousers: Formal or smart leg coverings. | Leggings: Tight stretchy leg coverings. | Skirt: A garment that hangs from the waist. | Mini skirt: A skirt that ends well above the knee. | Midi skirt: A skirt that ends at mid-calf. | Maxi skirt: A skirt that reaches the ankle or floor. | Shorts: Leg coverings that end above the knee. | Cargo pants: Trousers with large side pockets. | Wide-leg trousers: Trousers with a very loose, wide leg. | Flared jeans: Jeans that flare out below the knee. | Culotte: Wide-leg cropped trousers or shorts. | Cycling shorts: Tight shorts reaching mid-thigh.'), ('👗 Full outfits', 'Dress: A one-piece garment covering the body. | Jumpsuit: A one-piece garment with a top and trousers. | Playsuit: A short one-piece with shorts instead of trousers. | Romper: Similar to a playsuit, casual style. | Co-ord set: A matching top and bottom set. | Wrap dress: A dress that wraps and ties at the waist. | Bodycon dress: A tight, body-hugging dress. | Slip dress: A thin, strappy dress like a slip. | Shirt dress: A dress styled like a long shirt. | Babydoll dress: A short, loose dress with a high waist.'), ('👟 Footwear', 'Sneakers: Casual rubber-soled shoes. | Boots: Shoes that cover the ankle or higher. | Ankle boots: Short boots that end at the ankle. | Heels: Shoes with an elevated heel. | Sandals: Open shoes with straps. | Loafers: Slip-on leather shoes without laces. | Flats: Shoes with no heel. | Mules: Backless shoes or sandals. | Platform shoes: Shoes with a thick sole under the foot. | Ballet flats: Soft, thin-soled flat shoes.'), ('💍 Jewellery', 'Necklace: A chain or string worn around the neck. | Choker: A tight necklace worn close to the neck. | Pendant: A necklace with a hanging decorative piece. | Chain necklace: A simple linked metal chain. | Earrings: Decorative pieces worn on the ears. | Hoop earrings: Circular ring-shaped earrings. | Stud earrings: Small earrings that sit flat on the earlobe. | Drop earrings: Earrings that hang below the earlobe. | Bracelet: A band or chain worn on the wrist. | Ring: A circular band worn on the finger. | Brooch: A decorative pin fastened to clothing. | Anklet: A bracelet worn around the ankle.'), ('👜 Bags', "Tote bag: A large open-top bag with handles. | Clutch: A small handbag held in the hand with no strap. | Crossbody bag: A bag with a long strap worn across the body. | Shoulder bag: A bag worn on one shoulder. | Mini bag: A very small decorative bag. | Backpack: A bag worn on the back with two straps. | Handbag: A general term for a women's fashion bag."), ('🧣 Other accessories', 'Belt: A strap worn around the waist. | Scarf: A length of fabric worn around the neck or head. | Sunglasses: Tinted lenses worn to protect eyes from the sun. | Gloves: Coverings for the hands. | Hat: A shaped head covering with a brim. | Beanie: A snug knitted hat. | Beret: A soft, round, flat-crowned hat. | Headband: A band worn across the forehead or crown. | Hair scarf: A piece of fabric tied in or around the hair.'), ('👘 Style & Fit terms', "Oversized: Much larger than the standard size, for a baggy look. | Fitted: Closely follows the body's shape. | Regular fit: Standard sizing, not too loose or tight. | Slim fit: Slightly narrower than regular fit. | Relaxed fit: Comfortable and loose without being oversized. | A-line: Fitted at the top and flares out towards the hem. | Tailored: Precisely cut and fitted, usually by a professional.")];
+  sCt(`<div style="max-width:680px;margin:0 auto">
+    ${sections.map(([title,items])=>`
+      <div class="cb" style="margin-bottom:16px">
+        <div class="ct">${title}</div>
+        <div style="display:flex;flex-direction:column;gap:0">
+          ${items.split(' | ').map(entry=>{
+            const [term,...rest]=entry.split(': ');
+            return`<div style="display:grid;grid-template-columns:140px 1fr;gap:6px;padding:8px 0;border-bottom:1px solid var(--border)">
+              <div style="font-size:13px;font-weight:600;color:var(--text)">${term}</div>
+              <div style="font-size:13px;color:var(--text2);line-height:1.5">${rest.join(': ')}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`).join('')}
+  </div>`);
+}
+
+let packingLists=JSON.parse(localStorage.getItem('wrd_packing')||'[]');
+function savePacking(){localStorage.setItem('wrd_packing',JSON.stringify(packingLists));}
+
+function rPacking(){
+  sCH(`<div class="ch"><div class="cht">🧳 Packing list</div><div class="chs">Build travel capsule wardrobes</div></div>`);
+  sFB('');
+  sCt(`<div style="max-width:680px;margin:0 auto">
+    <button class="btn pr" onclick="newPackList()" style="margin-bottom:16px">+ New packing list</button>
+    ${packingLists.length?packingLists.map((pl,pi)=>`
+      <div class="cb" style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div class="ct" style="margin:0">${pl.name} <span style="font-size:12px;color:var(--text3);font-weight:400">${pl.dest||''} ${pl.dates||''}</span></div>
+          <div style="display:flex;gap:6px">
+            <button class="btn sm" onclick="addPackItem(${pi})">+ Add item</button>
+            <button class="btn sm dn" onclick="delPackList(${pi})">✕</button>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          ${(pl.items||[]).length?pl.items.map((it,ii)=>`
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+              <input type="checkbox" ${it.packed?'checked':''} onchange="togglePack(${pi},${ii},this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent)">
+              <span style="font-size:13px;flex:1;${it.packed?'text-decoration:line-through;color:var(--text3)':''}">${it.name}</span>
+              <span style="font-size:11px;color:var(--text3)">${it.qty>1?'×'+it.qty:''}</span>
+              <button class="btn sm dn" style="padding:2px 7px;font-size:11px" onclick="delPackItem(${pi},${ii})">✕</button>
+            </div>`).join(''):'<div style="font-size:13px;color:var(--text3);padding:8px 0">No items yet — add from your wardrobe or type manually</div>'}
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:var(--text3)">${(pl.items||[]).filter(i=>i.packed).length} of ${(pl.items||[]).length} packed</div>
+      </div>`).join(''):'<div class="empty"><div class="ei">🧳</div><p>No packing lists yet. Create one for your next trip!</p></div>'}
+  </div>`);
+}
+
+function newPackList(){
+  const name=prompt('List name (e.g. Paris trip):');if(!name)return;
+  const dest=prompt('Destination (optional):')||'';
+  const dates=prompt('Dates (optional):')||'';
+  packingLists.push({id:uid(),name:name.trim(),dest,dates,items:[]});
+  savePacking();rPacking();
+}
+
+function delPackList(pi){
+  if(!confirm('Delete this list?'))return;
+  packingLists.splice(pi,1);savePacking();rPacking();
+}
+
+function addPackItem(pi){
+  const name=prompt('Item name (or pick from wardrobe — type a name):');if(!name)return;
+  const qty=parseInt(prompt('Quantity:')||'1')||1;
+  // Try to match a wardrobe item
+  const match=items.find(i=>i.name.toLowerCase()===name.toLowerCase());
+  packingLists[pi].items.push({name:match?match.name:name.trim(),qty,packed:false,itemId:match?.id||null});
+  savePacking();rPacking();
+}
+
+function delPackItem(pi,ii){packingLists[pi].items.splice(ii,1);savePacking();rPacking();}
+
+function togglePack(pi,ii,val){packingLists[pi].items[ii].packed=val;savePacking();rPacking();}
+
+
+// ── STYLE GLOSSARY ────────────────────────────────────────────────────────────
+const GLOSSARY=[
+  // ── NECKLINES ────────────────────────────────────────────────────────────────
+  {type:'Crew neck',cat:'Necklines',icon:'⭕',color:'#E8F4FD',
+   def:'A round, collarless neckline that sits close to the base of the neck. One of the most common necklines in knitwear and T-shirts.',
+   details:[['Also called','Round neck'],['Common in','T-shirts, sweaters, sweatshirts'],['Neckline depth','High — sits at the collarbone'],['Formality','Casual to smart casual']]},
+  {type:'V-neck',cat:'Necklines',icon:'🔻',color:'#FDF0F8',
+   def:'A neckline cut in a V-shape pointing down towards the chest. The depth of the V varies from shallow (modest) to plunging (dramatic).',
+   details:[['Depth range','Shallow to deep plunge'],['Effect','Elongates the neck, draws the eye down'],['Common in','Tops, sweaters, dresses, blouses'],['Formality','Casual to formal depending on depth']]},
+  {type:'Square neck',cat:'Necklines',icon:'⬜',color:'#FFF0F5',
+   def:'A neckline cut in a straight horizontal line across the chest with squared corners. Very popular in summer tops and dresses.',
+   details:[['Shape','Straight across with right-angle corners'],['Effect','Broadens the shoulders, highlights the collarbone'],['Common in','Bodysuits, dresses, blouses'],['Era','Particularly popular in renaissance and modern fashion']]},
+  {type:'Scoop neck',cat:'Necklines',icon:'🥣',color:'#E8F5E9',
+   def:'A wide, rounded neckline that scoops low across the chest, sitting wider than a crew neck.',
+   details:[['Shape','Wide, curved U-shape'],['Effect','Shows more chest and shoulder than a crew neck'],['Common in','T-shirts, tank tops, dresses'],['Formality','Casual to smart casual']]},
+  {type:'Boat neck',cat:'Necklines',icon:'⛵',color:'#E3F2FD',
+   def:'A wide neckline that runs horizontally across the collarbone from shoulder to shoulder, following the line of the boat.',
+   details:[['Also called','Bateau neck'],['Effect','Widens shoulders, very elegant'],['Common in','Breton tops, dresses, knitwear'],['Formality','Smart casual to formal']]},
+  {type:'Off-shoulder',cat:'Necklines',icon:'✨',color:'#FFF8E1',
+   def:'A neckline that sits below both shoulders entirely, leaving the collarbone and shoulders bare. Held up with elastic, boning or structure.',
+   details:[['Effect','Bares both shoulders and collarbone'],['Structure','Elastic, boning, or structured fabric to stay up'],['Common in','Tops, dresses, blouses'],['Season','Spring/Summer, evening wear']]},
+  {type:'One-shoulder',cat:'Necklines',icon:'🔺',color:'#FDF0F8',
+   def:'An asymmetric neckline with one shoulder covered and one completely bare. Dramatic and modern.',
+   details:[['Symmetry','Asymmetric — one covered, one bare'],['Effect','Dramatic, elongates the neck'],['Common in','Evening tops, dresses'],['Formality','Smart casual to formal']]},
+  {type:'Halter neck',cat:'Necklines',icon:'🎯',color:'#FFF3E0',
+   def:'A neckline where straps go up from the bust and tie or fasten at the back of the neck, leaving the back and shoulders bare.',
+   details:[['Fastening','Ties or clips behind the neck'],['Bares','Shoulders, back, sides'],['Common in','Tops, dresses, swimwear'],['Effect','Highlights shoulders and arms']]},
+  {type:'Cowl neck',cat:'Necklines',icon:'🌊',color:'#F3F0FF',
+   def:'A draped neckline with loose, flowing fabric that falls in soft folds at the front of the neck or chest.',
+   details:[['Drape','Loose folds of fabric at front'],['Fabric','Usually soft, fluid fabrics like silk, jersey'],['Common in','Blouses, dresses, evening wear'],['Effect','Soft, romantic, elegant']]},
+  {type:'Turtleneck',cat:'Necklines',icon:'🐢',color:'#ECEFF1',
+   def:'A high, close-fitting folded collar that covers the neck completely, folding over on itself.',
+   details:[['Also called','Polo neck, rollneck'],['Coverage','Full neck coverage'],['Height','Typically 15–25cm tall when unrolled'],['Common in','Jumpers, bodycon tops']]},
+  {type:'Mock neck',cat:'Necklines',icon:'📏',color:'#E8F5E9',
+   def:'A high close-fitting collar that stands up but does not fold over — shorter than a turtleneck.',
+   details:[['Also called','Funnel neck, mock turtleneck'],['Height','Shorter than a turtleneck, does not fold'],['Common in','Tops, dresses, knitwear'],['Effect','Clean, modern, minimalist']]},
+  {type:'Sweetheart neck',cat:'Necklines',icon:'💗',color:'#FFF0F5',
+   def:'A neckline shaped like the top of a heart — two curves that dip to a centre point, resembling the top of a heart.',
+   details:[['Shape','Two symmetrical curves meeting at a centre dip'],['Effect','Romantic, highlights the bust and collarbone'],['Common in','Dresses, bodices, corset tops'],['Formality','Smart casual to formal, bridal']]},
+  {type:'Plunging neck',cat:'Necklines',icon:'⬇️',color:'#FDF0F8',
+   def:'A very deep V or straight neckline that extends well down the chest, sometimes to the sternum or below.',
+   details:[['Depth','Deep — well below the bust'],['Common in','Evening dresses, blouses, jumpsuits'],['Formality','Evening wear, formal'],['Effect','Dramatic, sensual']]},
+  {type:'Keyhole neck',cat:'Necklines',icon:'🔑',color:'#FFF8E1',
+   def:'A neckline with a small cutout opening at the front or back, shaped like an old-fashioned keyhole.',
+   details:[['Shape','Small circular or teardrop opening'],['Fastening','Usually fastened with a button or clasp above the hole'],['Common in','Dresses, blouses, tops'],['Effect','Subtle detail, elegant reveal']]},
+  {type:'Asymmetric neck',cat:'Necklines',icon:'↗️',color:'#F3F0FF',
+   def:'Any neckline that is not the same on both sides — one side may be higher, lower, or differently shaped than the other.',
+   details:[['Symmetry','Deliberately uneven'],['Effect','Modern, fashion-forward, dynamic'],['Common in','Contemporary dresses, tops'],['Formality','Smart casual to formal']]},
+
+  // ── SLEEVE STYLES ────────────────────────────────────────────────────────────
+  {type:'Set-in sleeve',cat:'Sleeve Styles',icon:'💪',color:'#E8F4FD',
+   def:'The most common sleeve construction — a separate sleeve piece sewn into a rounded armhole. Gives a clean, tailored fit at the shoulder.',
+   details:[['Construction','Separate sleeve set into a curved armhole'],['Fit at shoulder','Clean, fitted, defined shoulder point'],['Common in','Shirts, jackets, tailored pieces'],['Effect','Structured, formal']]},
+  {type:'Raglan sleeve',cat:'Sleeve Styles',icon:'🔗',color:'#EDF7ED',
+   def:'A sleeve that extends in one piece from the collar to the cuff, with a diagonal seam running from the armpit to the neck rather than across the shoulder.',
+   details:[['Seam','Diagonal from underarm to neckline'],['Shoulder','No defined shoulder seam — relaxed'],['Common in','Sports tops, casual sweatshirts, T-shirts'],['Effect','Relaxed, sporty, comfortable']]},
+  {type:'Drop shoulder',cat:'Sleeve Styles',icon:'⬇️',color:'#FFF3E0',
+   def:'A sleeve style where the shoulder seam falls below the natural shoulder point, sitting on the upper arm instead.',
+   details:[['Seam position','Below the natural shoulder'],['Effect','Relaxed, oversized feel, widens the shoulder'],['Common in','Oversized tops, sweatshirts, coats'],['Formality','Casual to smart casual']]},
+  {type:'Cap sleeve',cat:'Sleeve Styles',icon:'🔘',color:'#FDF0F8',
+   def:'A very short sleeve that just covers the top of the shoulder and the very top of the arm — shorter than a short sleeve.',
+   details:[['Length','Just covers the shoulder point'],['Effect','Feminine, delicate'],['Common in','Dresses, blouses, tops'],['Formality','Smart casual to formal']]},
+  {type:'Short sleeve',cat:'Sleeve Styles',icon:'👕',color:'#E8F5E9',
+   def:'A sleeve that ends between the shoulder and the elbow — usually around mid-upper arm.',
+   details:[['Length','Shoulder to mid-upper arm'],['Common in','T-shirts, shirts, dresses'],['Season','Spring, summer'],['Formality','Casual to smart casual']]},
+  {type:'Elbow sleeve',cat:'Sleeve Styles',icon:'📐',color:'#E3F2FD',
+   def:'A sleeve that ends at or just below the elbow — longer than short, shorter than three-quarter length.',
+   details:[['Length','Ends at or just below the elbow'],['Effect','Practical, slightly modest'],['Common in','Blouses, lightweight tops'],['Season','Spring, autumn']]},
+  {type:'Three-quarter sleeve',cat:'Sleeve Styles',icon:'📏',color:'#F3F0FF',
+   def:'A sleeve that extends approximately three-quarters of the way down the arm, ending between the elbow and the wrist.',
+   details:[['Length','Elbow to wrist, approximately 3/4 of arm'],['Effect','Elegant, modest, practical'],['Common in','Blouses, jackets, knitwear'],['Season','All seasons']]},
+  {type:'Long sleeve',cat:'Sleeve Styles',icon:'🧥',color:'#FFF8E1',
+   def:'A full-length sleeve that extends to the wrist.',
+   details:[['Length','Shoulder to wrist'],['Common in','Shirts, blouses, knitwear, jackets'],['Season','Autumn, winter, layering'],['Formality','All formality levels']]},
+  {type:'Bell sleeve',cat:'Sleeve Styles',icon:'🔔',color:'#FDF0F8',
+   def:'A sleeve that is fitted at the top and flares out dramatically towards the wrist, like the shape of a bell.',
+   details:[['Shape','Fitted at armhole, flared at hem'],['Fabric','Works best in flowing fabrics'],['Common in','Blouses, dresses, tops'],['Era','1960s and 70s inspired, boho']]},
+  {type:'Bishop sleeve',cat:'Sleeve Styles',icon:'⛪',color:'#E8F5E9',
+   def:'A long sleeve that is loose and full throughout, then gathered tightly at the wrist with a cuff.',
+   details:[['Shape','Full and billowy, gathered at wrist'],['Cuff','Fitted cuff at the wrist'],['Common in','Romantic blouses, dresses'],['Effect','Dramatic, romantic, historical']]},
+  {type:'Puff sleeve',cat:'Sleeve Styles',icon:'☁️',color:'#FFF0F5',
+   def:'A sleeve gathered at the shoulder or armhole to create volume and a rounded, puffy shape at the top of the arm.',
+   details:[['Volume','At the shoulder or cuff — or both'],['Common in','Blouses, dresses, tops'],['Era','Victorian, 1980s, modern romantic'],['Effect','Feminine, dramatic, statement']]},
+  {type:'Flutter sleeve',cat:'Sleeve Styles',icon:'🦋',color:'#FFF8E1',
+   def:'A very short, loose sleeve with no fixed hem that flutters freely — attached only at the armhole and falling loosely over the shoulder.',
+   details:[['Length','Very short — barely past the shoulder'],['Movement','Drapes and moves freely'],['Common in','Summer dresses, blouses'],['Effect','Light, feminine, romantic']]},
+  {type:'Sleeveless',cat:'Sleeve Styles',icon:'🎽',color:'#E3F2FD',
+   def:'A garment with no sleeve at all — the armhole may be narrow (for structure) or wide (for a relaxed look).',
+   details:[['Armhole style','Narrow (structured) or wide (relaxed)'],['Common in','Tank tops, dresses, blouses'],['Season','Spring, summer'],['Formality','Casual to formal depending on garment']]},
+  {type:'Cold shoulder',cat:'Sleeve Styles',icon:'❄️',color:'#F3F0FF',
+   def:'A sleeve style with cutouts or openings at the shoulder point, leaving the shoulder bare while the rest of the sleeve may be long or short.',
+   details:[['Detail','Opening or cutout at the shoulder'],['Sleeve length','Can be combined with any sleeve length'],['Common in','Tops, dresses'],['Effect','Flirty, fashion-forward']]},
+
+  // ── FITS ─────────────────────────────────────────────────────────────────────
+  {type:'Slim fit',cat:'Fits',icon:'📐',color:'#EDF7ED',
+   def:'Cut close to the body without being tight — shaped to follow the body silhouette with little extra room.',
+   details:[['Also called','Tailored fit'],['Room','Minimal — follows body closely'],['Common in','Shirts, trousers, jackets'],['Effect','Neat, polished, structured']]},
+  {type:'Regular fit',cat:'Fits',icon:'⬜',color:'#E8F4FD',
+   def:'The standard cut — not too fitted, not too loose. Comfortable without being baggy.',
+   details:[['Also called','Classic fit, standard fit'],['Room','Moderate ease throughout'],['Common in','All garment types'],['Effect','Versatile, easy to wear']]},
+  {type:'Relaxed fit',cat:'Fits',icon:'😌',color:'#FFF3E0',
+   def:'Slightly looser than regular — more room through the body and arms without being oversized.',
+   details:[['Room','More room than regular, less than oversized'],['Common in','Jeans, shirts, trousers'],['Effect','Comfortable, casual, laid-back']]},
+  {type:'Oversized',cat:'Fits',icon:'🌊',color:'#ECEFF1',
+   def:'Deliberately much larger than the wearer — designed to look big on the body, often borrowed from menswear sizing.',
+   details:[['Room','Significantly more than regular'],['Effect','Casual, streetwear, relaxed'],['Common in','Sweatshirts, T-shirts, coats'],['Styling','Balance with fitted bottoms']]},
+  {type:'Fitted',cat:'Fits',icon:'⏳',color:'#FDF0F8',
+   def:'Closely cut to the body with very little extra fabric — shaped to follow the exact contours of the body.',
+   details:[['Also called','Body-con fit, close fit'],['Room','Very little — follows the body shape'],['Common in','Dresses, tops, bodysuits'],['Effect','Defined silhouette, confident']]},
+  {type:'A-line',cat:'Fits',icon:'🔺',color:'#FFF0F5',
+   def:'Fitted at the top and gradually flares outward towards the hem, like the letter A. Skirts and dresses only.',
+   details:[['Shape','Fitted waist, flared hem'],['Common in','Skirts, dresses'],['Effect','Universally flattering — balances hips'],['Hem shape','Gently flared, even hemline']]},
+  {type:'Straight cut',cat:'Fits',icon:'⬇️',color:'#E8F5E9',
+   def:'A consistent width from waist to hem with no tapering or flaring — the same width all the way down.',
+   details:[['Common in','Jeans, trousers, skirts'],['Effect','Modern, clean, minimal'],['Silhouette','Column-like, no added curve'],['Fit','Comfortable with room to move']]},
+  {type:'Flared',cat:'Fits',icon:'🔔',color:'#FFF8E1',
+   def:'Fitted at the waist and hips, then dramatically widening from the knee down into a wide hem.',
+   details:[['Common in','Jeans, skirts, dresses'],['Effect','Dramatic, retro, balances hips'],['Era','1960s and 70s inspired'],['Flare point','Usually from the knee']]},
+  {type:'Wide leg',cat:'Fits',icon:'🌬️',color:'#F3F0FF',
+   def:'A trouser or bottom cut with a very wide leg opening from the hip all the way down to the hem.',
+   details:[['Width','Wide from hip to hem throughout'],['Common in','Trousers, jeans, jumpsuits'],['Effect','Elegant, 70s inspired, lengthening'],['Styling','Best with fitted top and heels']]},
+  {type:'Tapered',cat:'Fits',icon:'🔻',color:'#E3F2FD',
+   def:'Wider at the top and gradually narrowing toward the ankle or hem.',
+   details:[['Common in','Trousers, jeans'],['Effect','Smart, modern, easy to wear'],['Ankle','Narrower at the ankle than the thigh'],['Also called','Carrot leg, tapered leg']]},
+  {type:'Bootcut',cat:'Fits',icon:'🥾',color:'#EDF7ED',
+   def:'Fitted through the thigh and slightly flared from the knee down, specifically designed to sit over a boot.',
+   details:[['Flare','Slight, from the knee'],['Common in','Jeans, trousers'],['Purpose','Designed to fit over boots'],['Effect','Balanced silhouette, elongating']]},
+  {type:'Skinny',cat:'Fits',icon:'📏',color:'#FDF0F8',
+   def:'The tightest cut — fitted and stretchy throughout the leg from waist to ankle with very little ease.',
+   details:[['Also called','Spray-on, cigarette'],['Stretch','Usually contains elastane for movement'],['Common in','Jeans, trousers, leggings'],['Effect','Body-conscious, sleek']]},
+
+  // ── HEM LENGTHS ──────────────────────────────────────────────────────────────
+  {type:'Micro',cat:'Hem Lengths',icon:'⬆️',color:'#FFF0F5',
+   def:'The shortest possible hemline — sitting very high on the upper thigh, well above mid-thigh. Shorter than a mini.',
+   details:[['Position','Well above mid-thigh'],['Common in','Skirts, dresses, shorts'],['Era','1960s mod fashion, present-day streetwear'],[]]},
+  {type:'Mini',cat:'Hem Lengths',icon:'📐',color:'#FDF0F8',
+   def:'A hemline sitting above the knee, typically at mid-thigh. The defining length of miniskirts and mini dresses.',
+   details:[['Position','Mid-thigh to just above the knee'],['Common in','Skirts, dresses, shorts'],['Era','1960s Mary Quant, cyclically popular']]},
+  {type:'Above the knee',cat:'Hem Lengths',icon:'🦵',color:'#FFF8E1',
+   def:'A hemline sitting just above the knee — slightly longer than a mini but still showing most of the leg.',
+   details:[['Position','1–5cm above the knee'],['Common in','Skirts, dresses'],['Effect','Modest mini, versatile length']]},
+  {type:'Knee length',cat:'Hem Lengths',icon:'🎯',color:'#E8F5E9',
+   def:'A hemline landing exactly at or just below the knee. Classic and universally appropriate.',
+   details:[['Position','At or just below the knee'],['Common in','Skirts, dresses, shorts'],['Effect','Classic, modest, professional'],['Formality','Smart casual to business']]},
+  {type:'Midi',cat:'Hem Lengths',icon:'📏',color:'#E3F2FD',
+   def:'A hemline between the knee and the ankle — usually landing anywhere from just below the knee to mid-calf.',
+   details:[['Position','Below knee to mid-calf'],['Common in','Skirts, dresses'],['Effect','Elegant, feminine, versatile'],['Era','Cyclically fashionable, classic']]},
+  {type:'Maxi',cat:'Hem Lengths',icon:'⬇️',color:'#F3F0FF',
+   def:'A full-length hemline reaching the ankle or floor. Typically used for skirts, dresses and coats.',
+   details:[['Position','Ankle to floor'],['Common in','Skirts, dresses, coats'],['Effect','Dramatic, elegant, flowing'],['Fabric','Best in soft, flowing fabrics']]},
+  {type:'Asymmetric hem',cat:'Hem Lengths',icon:'↗️',color:'#FFF3E0',
+   def:'A hemline that is deliberately uneven — different lengths on different sides, or cut at an angle.',
+   details:[['Symmetry','Intentionally uneven'],['Common variations','High-low, handkerchief, diagonal'],['Common in','Dresses, skirts, tops'],['Effect','Dynamic, fashion-forward, movement']]},
+  {type:'High-low hem',cat:'Hem Lengths',icon:'📈',color:'#EDF7ED',
+   def:'An asymmetric hem where the front is significantly shorter than the back — a specific type of asymmetric hemline.',
+   details:[['Front','Short — mini or knee length'],['Back','Longer — midi or maxi length'],['Common in','Dresses, skirts'],['Effect','Playful, shows legs at front']]},
+  {type:'Handkerchief hem',cat:'Hem Lengths',icon:'🔷',color:'#FFF0F5',
+   def:'An uneven, pointed hem created by draping fabric at angles, creating points that hang down like the corners of a handkerchief.',
+   details:[['Shape','Multiple pointed panels hanging at different lengths'],['Common in','Skirts, dresses, blouses'],['Fabric','Soft, draped fabrics'],['Effect','Romantic, bohemian, feminine']]},
+
+  // ── DRESS CUTS ───────────────────────────────────────────────────────────────
+  {type:'Shift dress',cat:'Dress Cuts',icon:'⬜',color:'#E8F4FD',
+   def:'A simple, straight dress with minimal shaping — no defined waist, following a straight line from shoulder to hem.',
+   details:[['Silhouette','Straight — no waist definition'],['Length','Usually knee or above'],['Era','1960s Mod fashion classic'],['Common fabrics','Structured woven fabrics']]},
+  {type:'Wrap dress',cat:'Dress Cuts',icon:'🌀',color:'#FDF0F8',
+   def:'A dress that wraps around the body and ties at the side, creating a V-neckline and a naturally defined waist.',
+   details:[['Closure','Wraps and ties at the side waist'],['Neckline','V-neck created by the wrap'],['Silhouette','Defined waist, A-line or straight skirt'],['Effect','Universally flattering']]},
+  {type:'Bodycon dress',cat:'Dress Cuts',icon:'⏳',color:'#FFF0F5',
+   def:'A very fitted dress made from stretchy fabric that closely follows every contour of the body.',
+   details:[['Also called','Figure-hugging, tight dress'],['Fabric','Stretch jersey, bandage fabric'],['Silhouette','Fitted head to toe'],['Common lengths','Mini to midi']]},
+  {type:'Slip dress',cat:'Dress Cuts',icon:'✨',color:'#FFF8E1',
+   def:'A lightweight, bias-cut dress inspired by lingerie — typically in satin, silk or silk-like fabric with thin straps.',
+   details:[['Inspiration','Lingerie/slip underwear'],['Fabric','Satin, silk, charmeuse'],['Cut','Bias cut — fabric cut diagonally for drape and stretch'],['Straps','Thin spaghetti straps']]},
+  {type:'Shirt dress',cat:'Dress Cuts',icon:'👔',color:'#EDF7ED',
+   def:'A dress styled like an elongated shirt — with a collar, button placket down the front and often a belted waist.',
+   details:[['Features','Collar, buttons, shirt-style cuffs'],['Silhouette','Belted or loose, straight or A-line'],['Common fabrics','Cotton, chambray, linen'],['Formality','Smart casual to casual']]},
+  {type:'Babydoll dress',cat:'Dress Cuts',icon:'🎀',color:'#FFF0F5',
+   def:'A short dress with a fitted or smocked bodice and a loose, flared skirt that falls from just below the bust.',
+   details:[['Silhouette','Empire waist, full and short skirt'],['Waist position','Empire — just below the bust'],['Length','Mini'],['Effect','Playful, youthful, feminine']]},
+  {type:'Empire waist',cat:'Dress Cuts',icon:'👑',color:'#F3F0FF',
+   def:'A dress or top where the waistline sits just below the bust — much higher than the natural waist.',
+   details:[['Waist position','Just below the bust'],['Skirt','Usually full and flowing from the high waist'],['Also called','Regency waist, high waist'],['Effect','Elongates the leg, comfortable, flowing']]},
+  {type:'Fit and flare',cat:'Dress Cuts',icon:'🔔',color:'#E8F5E9',
+   def:'A dress that is closely fitted through the bodice and waist, then flares out into a full skirt from the hips.',
+   details:[['Top half','Fitted through bodice and waist'],['Bottom half','Full, flared skirt from the hip'],['Silhouette','Hourglass, structured'],['Common lengths','Mini to midi']]},
+  {type:'Column dress',cat:'Dress Cuts',icon:'🏛️',color:'#E3F2FD',
+   def:'A straight-cut dress with the same width from shoulder to hem — creating a long, vertical column silhouette.',
+   details:[['Also called','Sheath dress, pencil dress'],['Silhouette','Straight, narrow, column-like'],['Common lengths','Midi to maxi'],['Formality','Formal, red carpet, evening']]},
+  {type:'Tiered dress',cat:'Dress Cuts',icon:'🎂',color:'#FFF8E1',
+   def:'A dress constructed in horizontal layers or tiers of fabric that increase in width from top to bottom.',
+   details:[['Construction','Multiple horizontal fabric tiers'],['Effect','Volume increases toward hem'],['Common fabrics','Flowy fabrics — cotton, chiffon'],['Silhouette','Peasant-inspired, full']]},
+  {type:'Wrap skirt',cat:'Dress Cuts',icon:'🌀',color:'#FDF0F8',
+   def:'A skirt that wraps around the waist and ties or overlaps to close, creating a V-shaped opening at the front.',
+   details:[['Closure','Overlaps and ties at the waist'],['Front','V-shaped opening when worn'],['Common in','Skirts, sometimes dresses'],['Effect','Adjustable fit, feminine']]},
+  {type:'Peplum',cat:'Dress Cuts',icon:'🔔',color:'#FFF0F5',
+   def:'A short, flared frill or overskirt attached at the waist of a top or dress, creating extra volume at the hip.',
+   details:[['Position','Attached at the natural waist'],['Length','Short — just covers the hip'],['Common in','Tops, dresses, jackets'],['Effect','Creates waist definition and hip volume']]},
+
+  // ── SHOULDER STYLES ──────────────────────────────────────────────────────────
+  {type:'Structured shoulder',cat:'Shoulder Styles',icon:'🏗️',color:'#ECEFF1',
+   def:'A shoulder with padding or internal structure that creates a defined, angular shoulder point.',
+   details:[['Construction','Shoulder pads or internal structure'],['Effect','Broadens shoulders, powerful silhouette'],['Common in','Blazers, jackets, coats'],['Era','1980s power dressing, modern tailoring']]},
+  {type:'Natural shoulder',cat:'Shoulder Styles',icon:'🌿',color:'#E8F5E9',
+   def:'A shoulder construction that follows the natural slope and shape of the wearer — no padding or exaggeration.',
+   details:[['Padding','None'],['Effect','Relaxed, natural, comfortable'],['Common in','Casual jackets, knitwear, soft tailoring'],['Silhouette','Soft and natural']]},
+  {type:'Exaggerated shoulder',cat:'Shoulder Styles',icon:'💪',color:'#FFF3E0',
+   def:'An oversized, dramatically wide or angular shoulder that extends well beyond the natural shoulder point.',
+   details:[['Also called','Power shoulder, architectural shoulder'],['Effect','Dramatic, avant-garde, powerful'],['Common in','Designer pieces, fashion-forward jackets'],['Era','1980s, cyclically returned in high fashion']]},
+  {type:'Cold shoulder',cat:'Shoulder Styles',icon:'❄️',color:'#F3F0FF',
+   def:'A top or dress with cutouts or openings over the shoulder area, leaving the shoulder itself exposed.',
+   details:[['Detail','Hole or cutout at the shoulder'],['Sleeve','Can have long or short sleeves with gap at shoulder'],['Common in','Tops, dresses'],['Effect','Flirty, contemporary']]},
+  {type:'Ruffle shoulder',cat:'Shoulder Styles',icon:'🌸',color:'#FFF0F5',
+   def:'A shoulder with added ruffle, frill or flounce detail creating volume and decoration at the shoulder line.',
+   details:[['Detail','Ruffle or frill at shoulder'],['Common in','Blouses, dresses, tops'],['Effect','Romantic, feminine, statement'],['Fabric','Works best in soft, flowing fabric']]},
+
+  // ── COLLAR STYLES ────────────────────────────────────────────────────────────
+  {type:'Point collar',cat:'Collar Styles',icon:'🔺',color:'#EDF7ED',
+   def:'The standard shirt collar with pointed tips that fold down flat against the chest.',
+   details:[['Also called','Straight collar, classic collar'],['Tips','Pointed downward'],['Common in','Dress shirts, casual shirts'],['Formality','Smart casual to formal']]},
+  {type:'Spread collar',cat:'Collar Styles',icon:'📐',color:'#E3F2FD',
+   def:'A collar with wider-set points that spread further apart, creating a more open spread at the chest.',
+   details:[['Spread','Wider than a point collar'],['Common in','Formal shirts, business shirts'],['Tie','Best with wider tie knots'],['Effect','Contemporary, open, confident']]},
+  {type:'Band collar',cat:'Collar Styles',icon:'📏',color:'#FFF8E1',
+   def:'A collar that stands straight up around the neck with no fold-down points — essentially just the collar band.',
+   details:[['Also called','Mandarin collar, Nehru collar'],['Shape','Stands upright, no fold-over'],['Common in','Casual shirts, blouses, modern designs'],['Effect','Clean, minimal, modern']]},
+  {type:'Peter Pan collar',cat:'Collar Styles',icon:'🌸',color:'#FFF0F5',
+   def:'A flat collar with rounded ends that lie flat against the chest, named after the collar worn by J.M. Barrie's Peter Pan.',
+   details:[['Shape','Flat, rounded tips'],['Common in','Children's wear, feminine blouses, vintage styles'],['Effect','Sweet, vintage, feminine'],['Era','Victorian, 1940s-60s, cyclically returned']]},
+  {type:'Chelsea collar',cat:'Collar Styles',icon:'💗',color:'#FDF0F8',
+   def:'A collar with a deep V at the front and a flat back, creating a pointed V-shaped neckline framed by a flat collar.',
+   details:[['Shape','Deep V front with flat pointed collar'],['Era','1960s-70s fashion'],['Common in','Blouses, dresses'],['Effect','Retro, feminine, distinctive']]},
+  {type:'Pussy bow',cat:'Collar Styles',icon:'🎀',color:'#FFF0F5',
+   def:'Long fabric ties at the neck that can be tied into a bow — often attached to the collar of a blouse.',
+   details:[['Detail','Long neck ties forming a bow'],['Common in','Blouses, tops, dresses'],['Effect','Feminine, romantic, 1970s inspired'],['Styling','Can be tied multiple ways']]},
+  {type:'Revere collar',cat:'Collar Styles',icon:'🔻',color:'#E8F5E9',
+   def:'The collar on a jacket or blazer that folds back to create lapels — part of the jacket construction.',
+   details:[['Also called','Lapel collar, notch lapel'],['Common in','Blazers, jackets, coats'],['Shape','Folds back to create lapels'],['Types','Notch lapel, peak lapel, shawl lapel']]},
+
+  // ── WAISTLINES ───────────────────────────────────────────────────────────────
+  {type:'Natural waist',cat:'Waistlines',icon:'⏳',color:'#FFF8E1',
+   def:'A waistline that sits at the body's natural narrowest point — typically around the belly button.',
+   details:[['Position','Narrowest point of the torso'],['Effect','Balanced, classic proportions'],['Common in','Most trousers, skirts, dresses'],['Formality','All levels']]},
+  {type:'High waist',cat:'Waistlines',icon:'⬆️',color:'#FDF0F8',
+   def:'A waistline sitting above the natural waist — between the belly button and the bottom of the ribs.',
+   details:[['Position','Above the natural waist'],['Effect','Lengthens the leg, defines the waist'],['Common in','High-waisted jeans, trousers, skirts'],['Era','1950s, 70s, now mainstream']]},
+  {type:'Low rise',cat:'Waistlines',icon:'⬇️',color:'#E8F5E9',
+   def:'A waistline sitting below the natural waist — on or below the hip bone.',
+   details:[['Position','At or below the hip bone'],['Effect','Shows the midriff'],['Common in','Low-rise jeans, mini skirts, shorts'],['Era','Early 2000s Y2K, returned in 2020s']]},
+  {type:'Empire waist',cat:'Waistlines',icon:'👑',color:'#F3F0FF',
+   def:'A waistline just below the bust — much higher than the natural waist. Creates a flowing skirt from a high point.',
+   details:[['Position','Just below the bust'],['Also called','Regency waist'],['Common in','Dresses, tops'],['Effect','Flowing, comfortable, elongates the leg']]},
+  {type:'Drop waist',cat:'Waistlines',icon:'⬇️',color:'#EDF7ED',
+   def:'A waistline that sits below the natural waist, usually at the hip, before the skirt begins.',
+   details:[['Position','At the hip, below the natural waist'],['Effect','Elongates the torso, 1920s inspired'],['Common in','Dresses, skirts'],['Era','1920s flapper, cyclically returned']]},
+  {type:'Elasticated waist',cat:'Waistlines',icon:'🔄',color:'#E3F2FD',
+   def:'A waistband made entirely or partly from elastic, creating a stretchy, adjustable fit.',
+   details:[['Adjustment','Stretches to fit a range of sizes'],['Fastening','No button or zip needed'],['Common in','Casual trousers, skirts, swimwear'],['Comfort','High — adjustable to the body']]},
+  {type:'Drawstring waist',cat:'Waistlines',icon:'🪢',color:'#FFF3E0',
+   def:'A waistband with a cord or ribbon threaded through a channel that can be pulled and tied to adjust the fit.',
+   details:[['Adjustment','Pull cord to tighten or loosen'],['Common in','Casual trousers, shorts, skirts'],['Style','Relaxed, sporty, casual'],['Fastening','Ties in a bow or knot']]},
+];
+
+function rGlossary(){
+  sCH(`<div class="ch"><div class="cht">📖 Style glossary</div><div class="chs">Necklines, fits, sleeve styles, lengths, cuts and more</div></div>`);
+  sFB('');
+  const gCats=[...new Set(GLOSSARY.map(g=>g.cat))];
+  if(!window._gCat)window._gCat='All';
+  const activeGCat=window._gCat;
+  const search=(gi('gSearch')?.value||window._gSearch||'').toLowerCase();
+  window._gSearch=search;
+
+  const filtered=GLOSSARY.filter(g=>{
+    if(activeGCat!=='All'&&g.cat!==activeGCat)return false;
+    if(search&&!g.type.toLowerCase().includes(search)&&!g.def.toLowerCase().includes(search)&&!g.cat.toLowerCase().includes(search))return false;
+    return true;
+  });
+
+  const pills=`<div style="display:flex;gap:6px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--border);align-items:center">
+    ${['All',...gCats].map(c=>`<button onclick="window._gCat='${c}';rGlossary()" style="padding:5px 12px;border-radius:99px;border:1px solid var(--border2);background:${activeGCat===c?'var(--accent)':'var(--bg)'};color:${activeGCat===c?'var(--afg)':'var(--text2)'};cursor:pointer;font-size:11px;font-weight:500;font-family:'DM Sans',sans-serif;white-space:nowrap">${c}</button>`).join('')}
+    <input type="text" id="gSearch" placeholder="Search..." oninput="window._gSearch=this.value;rGlossary()" value="${search}" style="margin-left:auto;height:28px;padding:0 10px;border-radius:99px;border:1px solid var(--border2);font-size:11px;min-width:140px;background:var(--bg);color:var(--text)">
+  </div>`;
+
+  const cards=filtered.map(g=>`
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
+      <div style="background:${g.color};padding:14px 16px 10px;display:flex;align-items:center;gap:10px">
+        <div style="font-size:28px;flex-shrink:0">${g.icon}</div>
+        <div>
+          <div style="font-family:'DM Serif Display',serif;font-size:16px;color:#1a1a1a">${g.type}</div>
+          <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.07em">${g.cat}</div>
+        </div>
+      </div>
+      <div style="padding:12px 16px">
+        <div style="font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:12px">${g.def}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          ${(g.details||[]).filter(d=>d&&d.length>=2).map(([label,val])=>`
+            <div style="background:var(--bg2);border-radius:var(--r);padding:7px 10px">
+              <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">${label}</div>
+              <div style="font-size:12px;color:var(--text2);font-weight:500">${val}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>`).join('');
+
+  sCt(`${pills}<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px;padding:12px 16px">${filtered.length?cards:`<div class="empty"><div class="ei">🔍</div><p>Nothing found</p></div>`}</div>`);
+}
+
 </script>
 </body>
 </html>
