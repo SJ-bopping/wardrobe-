@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 function startListeners(){
   _uns.forEach(u=>u());_uns=[];
-  let loaded={items:false,outfits:false,wishlist:false,ideas:false,cats:false,capsules:false};
+  let loaded={items:false,outfits:false,wishlist:false,ideas:false,cats:false,capsules:false,packlists:false,templates:false};
   function chk(){if(Object.values(loaded).every(Boolean)){window._dataReady=true;[100,400,800].forEach(ms=>setTimeout(()=>{if(typeof renderCurrent==='function'){updateBadges();renderCurrent();}},ms));}}
   const sub=(col,fn,key)=>db.collection('users').doc(_uid).collection(col).onSnapshot(snap=>{fn(snap.docs.map(d=>d.data()));if(!loaded[key]){loaded[key]=true;chk();}else if(typeof updateBadges==='function')updateBadges();});
   _uns.push(sub('items',d=>{items=d;},'items'));
@@ -34,6 +34,9 @@ function startListeners(){
   _uns.push(sub('ideas',d=>{ideas=d;},'ideas'));
   _uns.push(sub('cats',d=>{cats=d;if(!cats.length)seedCats();},'cats'));
   _uns.push(sub('capsules',d=>{capsules=d;},'capsules'));
+  _uns.push(sub('packlists',d=>{packlists=d;},'packlists'));
+  _uns.push(sub('templates',d=>{templates=d;},'templates'));
+
 }
 async function seedCats(){const b=db.batch();DEFAULT_CATS.forEach(c=>b.set(db.collection('users').doc(_uid).collection('cats').doc(c.id),c));await b.commit();}
 window.fbSave=async(col,item)=>{if(!_uid)return;syncDot('sy');try{const cl={};for(const[k,v]of Object.entries(item)){if(v===undefined||v===null)continue;cl[k]=Array.isArray(v)?v.filter(x=>x!=null):v;}await db.collection('users').doc(_uid).collection(col).doc(item.id).set(cl);syncDot('ok');}catch(e){syncDot('er');console.error(e);}};
@@ -261,8 +264,9 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
       <span class="nl">Analyse</span>
       <button class="nb" id="nav-stats" onclick="nav('stats')"><span class="ni">📊</span>Insights</button>
       <button class="nb" id="nav-calendar" onclick="nav('calendar')"><span class="ni">📅</span>Wear calendar</button>
-      <button class="nb" id="nav-history" onclick="nav('history')"><span class="ni">👗</span>Outfit history</button>
       <button class="nb" id="nav-capsule" onclick="nav('capsule')"><span class="ni">✨</span>Capsule builder</button>
+      <button class="nb" id="nav-pack" onclick="nav('pack')"><span class="ni">🧳</span>Pack list</button>
+
       <button class="nb" id="nav-glossary" onclick="nav('glossary')"><span class="ni">📖</span>Style glossary</button>
     </div>
     <div class="ns">
@@ -333,7 +337,7 @@ async function uploadPhotos(files){
 }
 
 // ── DATA ──────────────────────────────────────────────────────────────────────
-let items=[],outfits=[],cats=[],wishlist=[],ideas=[],capsules=[];
+let items=[],outfits=[],cats=[],wishlist=[],ideas=[],capsules=[],packlists=[],templates=[];
 const CURRENCIES=[
   {code:'GBP',sym:'£',name:'British Pound'},{code:'EUR',sym:'€',name:'Euro'},
   {code:'USD',sym:'$',name:'US Dollar'},{code:'DKK',sym:'Kr',name:'Danish Krone'},
@@ -462,7 +466,7 @@ function gi(id){return document.getElementById(id);}
 function gv(id){return(gi(id)||{}).value||'';}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 function isLight(h){if(!h||h.startsWith('linear'))return true;try{const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return(r*299+g*587+b*114)/1000>155;}catch{return true;}}
-function hx(n){return(COLORS.find(c=>c.n===n)||{h:'#e0e0e0'}).h;}
+function hx(n){if(!n)return'#e0e0e0';const nl=n.toLowerCase();return(COLORS.find(c=>c.n.toLowerCase()===nl)||COLORS.find(c=>c.n.toLowerCase().includes(nl)||nl.includes(c.n.toLowerCase()))||{h:'#e0e0e0'}).h;}
 function f2b(file){return new Promise((r,j)=>{const rd=new FileReader();rd.onload=e=>r(e.target.result);rd.onerror=j;rd.readAsDataURL(file);});}
 function om(id){gi(id).style.display='flex';}
 function cm(id){gi(id).style.display='none';}
@@ -479,7 +483,7 @@ function updateBadges(){
 }
 
 // ── NAV ───────────────────────────────────────────────────────────────────────
-const NAV_TITLES={all:'All clothes',outfits:'Outfits',wishlist:'Wishlist',ideas:'Outfit ideas',inspo:'Outfit inspo',stats:'Insights',calendar:'Wear calendar',history:'Outfit history',capsule:'Capsule builder',settings:'Settings'};
+const NAV_TITLES={all:'All clothes',outfits:'Outfits',wishlist:'Wishlist',ideas:'Outfit ideas',inspo:'Outfit inspo',stats:'Insights',calendar:'Wear calendar',capsule:'Capsule builder',pack:'Pack list',settings:'Settings'};
 function nav(v){
   view=v;
   document.querySelectorAll('.nb,.bb').forEach(b=>b.classList.remove('active'));
@@ -496,7 +500,7 @@ function renderCurrent(){
   else if(view==='ideas')rIdeas();
   else if(view==='inspo')rInspo();
   else if(view==='stats')rStats();
-  else if(view==='calendar')rCal();else if(view==='history')rHistory();else if(view==='capsule')rCapsule();
+  else if(view==='calendar')rCal();else if(view==='capsule')rCapsule();else if(view==='pack')rPack();
   else if(view==='settings')rSettings();else if(view==='glossary'){window._gCat='All';rGlossary();}
 }
 function toggleSidebar(){gi('sidebar').classList.toggle('open');gi('sov').classList.toggle('open');}
@@ -536,11 +540,13 @@ function rItems(){
     <select class="fsel" id="focc" onchange="rItems()"><option value="">All styles</option>${occs.map(o=>`<option ${of===o?'selected':''}>${o}</option>`).join('')}</select>
     <select class="fsel" id="fcat" onchange="rItems()"><option value="">All categories</option>${cats.map(c=>`<option value="${c.id}" ${catf===c.id?'selected':''}>${c.name}</option>`).join('')}</select>
     <select class="fsel" id="fsort" onchange="rItems()">${[['name','Name A–Z'],['brand','Brand'],['color','Color'],['season','Season'],['worn','Most worn'],['newest','Newest']].map(([v,l])=>`<option value="${v}" ${so===v?'selected':''}>${l}</option>`).join('')}</select>
-    <div class="vt"><button class="vb ${gmode==='grid'?'active':''}" onclick="setGM('grid')">⊞</button><button class="vb ${gmode==='list'?'active':''}" onclick="setGM('list')">☰</button></div>
+    <div class="vt"><button class="vb ${gmode==='grid'?'active':''}" onclick="setGM('grid')">⊞</button><button class="vb ${gmode==='closet'?'active':''}" onclick="setGM('closet')">🚪</button><button class="vb ${gmode==='colour'?'active':''}" onclick="setGM('colour')">🌈</button></div>
     <button class="btn sm pr" onclick="openAddItem()">+ Add</button>
   </div>`);
   if(!list.length){sCt(`<div class="empty"><div class="ei">👗</div><p>${items.length?'No items match.':'Add your first item!'}</p></div>`);return;}
-  sCt(gmode==='list'?`<div style="display:flex;flex-direction:column;gap:6px">${list.map(iLR).join('')}</div>`:`<div class="grid">${list.map(iCard).join('')}</div>`);
+  if(gmode==='closet'){sCt(renderClosetView(list));return;}
+  if(gmode==='colour'){sCt(renderColourView(list));return;}
+  sCt(`<div class="grid">${list.map(iCard).join('')}</div>`);
 }
 function setGM(m){gmode=m;rItems();}
 
@@ -817,9 +823,24 @@ function delWish(id){if(!confirm('Remove?'))return;wishlist=wishlist.filter(w=>w
 function wish2ward(id){const w=wishlist.find(x=>x.id===id);if(!w)return;wishlist=wishlist.filter(x=>x.id!==id);const item={id:uid(),name:w.name,brand:w.brand||'',price:w.price||'',subtype:'Other',category:cats[0]?.id||'',color:'Other',season:'All-season',occasion:'Casual',condition:'New',photos:[],tags:[],wornCount:0,addedAt:Date.now(),updatedAt:Date.now()};items.push(item);updateBadges();renderCurrent();showToast('Moved to wardrobe ✓');persistDel('wishlist',id);persist('items',item);}
 
 // ── OUTFIT IDEAS ──────────────────────────────────────────────────────────────
-function rIdeas(){
-  sCH(`<div class="ch"><div class="cht">Outfit ideas</div><div class="chs">${ideas.length} idea${ideas.length!==1?'s':''}</div></div>`);
-  sFB(`<div class="fb"><div class="fbs"><input type="text" id="dsrch" placeholder="Search ideas..." oninput="rIdeas()"></div><button class="btn sm pr" onclick="openAddIdea()" style="margin-left:auto">+ Create outfit</button></div>`);
+function rIdeas(tab){
+  if(!window._ideasTab)window._ideasTab='outfits';
+  if(tab)window._ideasTab=tab;
+  const isTemplates=window._ideasTab==='templates';
+  sCH(`<div class="ch"><div class="cht">Outfit ideas</div><div class="chs">${isTemplates?templates.length+' template'+(templates.length!==1?'s':''):ideas.length+' idea'+(ideas.length!==1?'s':'')}</div></div>`);
+  const isMix=window._ideasTab==='mix';
+  sFB(`<div class="fb">
+    <div style="display:flex;gap:0;border-bottom:2px solid var(--border2);width:100%">
+      <button onclick="window._ideasTab='outfits';rIdeas()" style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:${!isTemplates&&!isMix?'var(--accent)':'var(--text3)'};border-bottom:${!isTemplates&&!isMix?'2px solid var(--accent)':'2px solid transparent'};margin-bottom:-2px;font-family:'DM Sans',sans-serif">👚 Outfits</button>
+      <button onclick="window._ideasTab='mix';rIdeas()" style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:${isMix?'var(--accent)':'var(--text3)'};border-bottom:${isMix?'2px solid var(--accent)':'2px solid transparent'};margin-bottom:-2px;font-family:'DM Sans',sans-serif">🎨 Mix & match</button>
+      <button onclick="window._ideasTab='templates';rIdeas()" style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:${isTemplates?'var(--accent)':'var(--text3)'};border-bottom:${isTemplates?'2px solid var(--accent)':'2px solid transparent'};margin-bottom:-2px;font-family:'DM Sans',sans-serif">📋 Templates</button>
+      ${!isTemplates&&!isMix?`<div class="fbs" style="margin-left:auto"><input type="text" id="dsrch" placeholder="Search ideas..." oninput="rIdeas()"></div>`:''}
+      ${!isTemplates&&!isMix?`<button class="btn sm pr" onclick="openAddIdea()" style="margin-left:auto">+ Create</button>`:''}
+      ${isTemplates?`<button class="btn sm pr" onclick="openTemplateBuilder()" style="margin-left:auto">+ New template</button>`:''}
+    </div>
+  </div>`);
+  if(isTemplates){rTemplatesList();return;}
+  if(isMix){rMixMatch();return;}
   const sr=gv('dsrch').toLowerCase();
   const list=ideas.filter(d=>!sr||d.name.toLowerCase().includes(sr)).sort((a,b)=>b.createdAt-a.createdAt);
   if(!list.length){sCt(`<div class="empty"><div class="ei">👚</div><p>${ideas.length?'No ideas match.':'Build outfit ideas or save them from Outfit inspo!'}</p></div>`);return;}
@@ -924,11 +945,8 @@ const SHO_TYPES=['Sneakers','Boots','Ankle boots','Heels','Sandals','Loafers','F
 const ACC_TYPES=['Belt','Hat','Cap','Beanie','Scarf','Bag','Handbag','Tote bag','Backpack','Sunglasses','Jewellery','Necklace','Watch'];
 
 const STYLES=[
-  {id:'my',label:'✨ My style',desc:'Outfits built from your wardrobe — your way',palette:null,
-   tips:['Start with one hero piece and build around it','Mix textures to add depth — denim with knit, silk with cotton','Accessories can transform even the simplest outfit','Tuck, half-tuck or knot your top for instant shape','Try items together you would not normally pair'],
-   names:['Effortless look','Weekend ready','Day-to-night','Elevated basics','Fresh take','Off-duty']},
   {id:'minimal',label:'🤍 Minimalist',desc:'Clean lines, neutral tones, intentional simplicity',palette:['White','Off-white','Ivory','Cream','Black','Grey','Charcoal','Beige','Camel','Sand','Stone','Light grey','Silver'],
-   tips:['Max 2 colours — neutrals only, no prints','Let silhouette and fit do all the talking','One subtle texture contrast is enough (silk + wool, denim + cotton)','Tuck your top fully — nothing half-done','Delicate minimal jewellery — one piece maximum'],
+   tips:['Max 2 colours — neutrals only, no prints','Let silhouette and fit do all the talking','One subtle texture contrast is enough','Tuck your top fully — nothing half-done','Delicate minimal jewellery — one piece maximum'],
    names:['Quiet confidence','Clean slate','Monochrome moment','Neutral grounds','Effortless minimal']},
   {id:'streetwear',label:'🧢 Streetwear',desc:'Urban, bold, oversized — where comfort meets edge',palette:['Black','White','Grey','Charcoal','Navy','Olive','Khaki'],
    tips:['Contrast oversized top with slimmer bottoms or vice versa','Graphic or statement piece leads — rest stays simple','Chunky trainers or boots are non-negotiable','Layer a hoodie under an open jacket for dimension','A cap or beanie worn low completes the vibe'],
@@ -936,9 +954,6 @@ const STYLES=[
   {id:'coastal',label:'🌊 Coastal grandmother',desc:'Relaxed, breezy, effortlessly sun-bleached',palette:['White','Off-white','Ivory','Cream','Beige','Sand','Sky blue','Light blue','Baby blue','Powder blue','Lemon','Mint'],
    tips:['Linen and cotton only — nothing heavy or synthetic','Everything slightly relaxed — nothing structured or stiff','Roll sleeves and hems for a naturally lived-in look','Simple gold jewellery and a woven bag feel perfect','White or tan sandals tie the whole look together'],
    names:['Sunday morning','Coastal drift','Harbour days','Linen season','Breezy afternoon']},
-  {id:'coquette',label:'🎀 Coquette',desc:'Soft, feminine, dreamy — bows, blush and silk',palette:['Baby pink','Powder pink','Blush pink','White','Lavender','Dusty rose','Lilac','Ivory','Rose gold'],
-   tips:['A bow detail is the signature coquette finishing touch','Soft floaty fabrics over anything stiff or structured','Layer two or three delicate necklaces together','Ballet flats or strappy kitten heels keep it feminine','Carry a small dainty bag — a mini or structured clutch'],
-   names:['Soft focus','Ballet core','Pink hour','Darling look','Sugar rush']},
   {id:'oldmoney',label:'💎 Old money',desc:'Timeless, tailored, quiet luxury — no logos needed',palette:['Navy','Camel','Cream','Beige','Brown','White','Tan','Khaki','Ivory','Chocolate'],
    tips:['Tailored fit is non-negotiable — nothing baggy or sloppy','Natural fabrics — wool, cashmere, silk, linen','Zero loud logos or prints — let the cut speak for itself','Simple gold jewellery only — a watch or thin chain','Loafers, ballet flats or clean leather shoes always'],
    names:['Heritage look','Polo club','Quiet luxury','Club classic','Understated wealth']},
@@ -951,48 +966,50 @@ const STYLES=[
   {id:'stargirl',label:'⭐ Stargirl',desc:'Dreamy, celestial, shimmer and soft wonder',palette:['Silver','Lavender','Baby blue','White','Soft lilac','Pale lavender','Ice blue','Thistle','Powder pink'],
    tips:['Shimmer or metallic fabric is the stargirl signature','Layer star or moon jewellery — the more delicate the better','Floaty and ethereal always beats structured and stiff','Sparkle in one place only — bag, shoes or top','Dreamy pastels with one silver accent is the formula'],
    names:['Celestial moment','Star light','Moon child','Galaxy glow','Shooting star']},
-  {id:'messyitgirl',label:'💋 Messy it girl',desc:'Effortlessly undone — nothing too perfect, everything intentional',palette:['Black','White','Grey','Charcoal','Brown','Burgundy','Olive','Denim'],
-   tips:['Nothing should look planned — that is the whole point','An oversized piece over something fitted underneath works every time','Half-tuck only — never fully tucked in','One deliberately bold or unexpected piece makes it feel intentional','Low-effort shoes — worn-in trainers or simple ankle boots'],
-   names:['Undone chic','Cool girl','Accidental outfit','Too cool','Off the cuff']},
   {id:'romantic',label:'📖 Romantic academia',desc:'Literary, warm, softly scholarly and dreamy',palette:['Brown','Camel','Cream','Ivory','Burgundy','Wine','Dusty rose','Olive','Tan','Mocha'],
    tips:['Layer a cardigan, knit or blazer over absolutely everything','Mix a warm floral with plaid or a textured knit','A structured leather tote or satchel is essential','Delicate jewellery — a thin chain or small pearl earrings','High-waisted skirts or tailored trousers feel most romantic academic'],
    names:['Library hours','Soft study','Chapter one','Candlelight','Garden party']},
-  {id:'y2k',label:'⭐ Y2K',desc:'Low rise, bold colours, nostalgic 2000s energy',palette:['Hot pink','Baby blue','Purple','Yellow','Silver','Fuchsia','Turquoise','Candy pink'],
-   tips:['Low-rise waistband is the most Y2K silhouette you can wear','Crop everything — tops, cardigans, jackets, all of it','Mix metallics with bright colours and do not hold back','Chunky colourful jewellery and a tiny bag are essential','Tinted or wraparound sunglasses complete the whole era'],
-   names:['2004 throwback','Pop princess','Cyber babe','Digital age','Glitter era']},
-  {id:'boho',label:'🌿 Boho',desc:'Flowy, earthy, layered and completely free-spirited',palette:['Brown','Tan','Rust','Olive','Terracotta','Cream','Mustard','Apricot','Khaki','Sage'],
-   tips:['Layer multiple loose flowy pieces — nothing structured or rigid','Mix natural textures freely: linen, knit, suede, woven cotton','Earthy tones with one warm accent colour work every time','Stack bracelets and rings on both hands generously','Maxi skirts or wide flowy trousers are the silhouette'],
-   names:['Free spirit','Earth child','Festival mood','Wild garden','Wanderer']},
-  {id:'dark',label:'🖤 Dark academia',desc:'Moody, scholarly, deep tones and rich textures',palette:['Black','Charcoal','Brown','Chocolate','Burgundy','Wine','Navy','Olive','Mocha'],
-   tips:['A blazer or structured coat anchors every dark academia look','Mix plaid, tweed or herringbone with plain pieces for texture','Deep jewel tones — burgundy, forest green, navy — work together perfectly','A leather satchel or structured canvas bag is the bag','Chelsea boots or Oxford shoes are the only shoes you need'],
-   names:['Study hall','Autumn library','Candlewick','Midnight scholar','Gothic garden']},
   {id:'sporty',label:'🏃 Sporty chic',desc:'Athletic meets polished — effortlessly active and elevated',palette:['Black','White','Grey','Navy','Olive','Cobalt blue'],
    tips:['One tailored piece instantly elevates any athletic outfit','Monochrome sporty looks feel the most intentionally elevated','Clean white trainers are the most versatile sporty shoe','A structured bag balances the athletic silhouette beautifully','Minimal jewellery — a simple chain or small hoops only'],
    names:['Active energy','Court side','Track to table','Sport luxe','Game day']},
-  {id:'preppy',label:'🎓 Preppy',desc:'Polished, classic and effortlessly collegiate',palette:['Navy','White','Red','Green','Yellow','Camel','Burgundy','Ivory'],
-   tips:['Always tuck your top in — at minimum a French tuck','Layer a fine-knit jumper over a collared shirt','Loafers or ballet flats are the preppy shoes','A leather belt and structured bag finish any preppy look','Stripe, check or argyle prints feel very on-point'],
-   names:['Class photo','Campus style','Ivy league','Weekend club','Academic chic']},
-  {id:'vintage',label:'🕰️ Vintage',desc:'Retro-inspired, nostalgic and full of character',palette:['Brown','Tan','Rust','Mustard','Olive','Burgundy','Terracotta','Mocha','Wine','Camel'],
-   tips:['One vintage hero piece leads — everything else can be modern','High-waisted silhouettes feel the most authentically retro','Warm earthy tones or a single bold vintage print works perfectly','Vintage-inspired accessories — a silk scarf, cat-eye sunnies, a beret','Wear it with confidence — vintage dressing is always intentional'],
-   names:['Retro Sunday','Thrift find','Past perfect','Nostalgia trip','Vintage chapter']},
 ];
 
 let inspoTab='shuffle', inspoStyle='my', inspoLoading=false;
 
 function rInspo(){
-  sCH(`<div class="ch"><div class="cht">✨ Outfit inspo</div><div class="chs">Style suggestions from your wardrobe</div></div>`);
+  sCH(`<div class="ch"><div class="cht">Outfit inspo</div><div class="chs">Style-matched outfits from your wardrobe</div></div>`);
   sFB('');
-  if(items.length<2){sCt(`<div class="empty"><div class="ei">👗</div><p>Add at least 2 items to get outfit suggestions!</p></div>`);return;}
+  if(!window._inspoStyle)window._inspoStyle=STYLES[0].id;
+  const activeStyle=STYLES.find(s=>s.id===window._inspoStyle)||STYLES[0];
 
-  // Tab bar
-  const tabHtml=`<div style="display:flex;gap:0;border-bottom:2px solid var(--border2);margin-bottom:20px">
-    <button onclick="switchInspoTab('shuffle')" id="tab-shuffle" style="padding:10px 20px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:600;color:${inspoTab==='shuffle'?'var(--accent)':'var(--text3)'};border-bottom:${inspoTab==='shuffle'?'2px solid var(--accent)':'2px solid transparent'};margin-bottom:-2px;transition:all .12s">🎲 Quick shuffle</button>
-    <button onclick="switchInspoTab('ai')" id="tab-ai" style="padding:10px 20px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:600;color:${inspoTab==='ai'?'var(--accent)':'var(--text3)'};border-bottom:${inspoTab==='ai'?'2px solid var(--accent)':'2px solid transparent'};margin-bottom:-2px;transition:all .12s">✨ Style aesthetics</button>
+  const pills=`<div style="overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;border-bottom:1px solid var(--border)">
+    <div style="display:flex;gap:6px;padding:10px 16px;width:max-content">
+      ${STYLES.map(s=>`<button onclick="window._inspoStyle='${s.id}';rInspo()" style="padding:5px 12px;border-radius:99px;border:1px solid var(--border2);background:${window._inspoStyle===s.id?'var(--accent)':'var(--bg)'};color:${window._inspoStyle===s.id?'var(--afg)':'var(--text2)'};cursor:pointer;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;white-space:nowrap;flex-shrink:0">${s.label}</button>`).join('')}
+    </div>
   </div>`;
 
-  sCt(tabHtml + '<div id="inspo-tab-content"></div>');
-  renderInspoTab();
+  const outfitCards=genStyleOutfits(activeStyle);
+
+  const styleCard=`<div style="padding:12px 16px 0">
+    <div style="background:var(--bg2);border-radius:var(--rl);padding:14px 16px;margin-bottom:12px;display:flex;gap:14px;align-items:flex-start">
+      <div style="flex:1">
+        <div style="font-family:'DM Serif Display',serif;font-size:16px;margin-bottom:3px">${activeStyle.label}</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:10px">${activeStyle.desc}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          ${activeStyle.tips.map(t=>`<div style="font-size:11px;color:var(--text2);padding:4px 0;width:100%">· ${t}</div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <button class="btn" onclick="window._inspoSeed=Date.now();rInspo()" style="width:100%;margin-bottom:12px;border:1px solid var(--border2)">🔀 Regenerate outfits</button>
+  </div>`;
+
+  sCt(pills+styleCard+`<div style="padding:0 16px 16px">${
+    outfitCards.length
+      ?outfitCards.join('')
+      :`<div class="empty"><div class="ei">👗</div><p>Not enough items for this style.<br>Add more pieces to your wardrobe!</p></div>`
+  }</div>`);
 }
+
 
 function switchInspoTab(tab){
   inspoTab=tab;
@@ -1227,166 +1244,112 @@ function getOutfitTip(outfit, styleInfo){
   return tips.slice(0,2);
 }
 
-function genStyleOutfits(){
-  const styleInfo=STYLES.find(s=>s.id===inspoStyle)||STYLES[0];
-  const results=gi('ai-results');if(!results)return;
+function genStyleOutfits(styleInfo){
+  if(!styleInfo)styleInfo=STYLES[0];
 
-  // Smart item filtering: palette + fit + subtype preferences per style
   const STYLE_PREFS={
-    minimal:{subtypes:[...TOP_TYPES,...BOT_TYPES,...SHO_TYPES],avoidSubtypes:['Joggers','Sweatpants','Sweatshirt','Hoodie'],avoidColors:['Multicolor','Tie-dye','Animal print']},
-    streetwear:{subtypes:[...TOP_TYPES,'Joggers','Sweatpants','Sweatshirt',...BOT_TYPES,...OUT_TYPES,...SHO_TYPES],avoidSubtypes:['Heels','Flats'],preferFits:['Oversized','Baggy','Loose']},
-    coastal:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...SHO_TYPES,...ACC_TYPES],avoidColors:['Black','Charcoal','Burgundy','Maroon']},
-    coquette:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...ACC_TYPES],preferSubtypes:['Dress','Midi dress','Mini dress','Skirt','Midi skirt','Blouse','Top'],avoidSubtypes:['Hoodie','Joggers','Sweatpants','Sneakers']},
-    oldmoney:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...OUT_TYPES,...SHO_TYPES],preferSubtypes:['Blazer','Trousers','Shirt','Blouse','Loafers','Coat'],avoidSubtypes:['Joggers','Sweatpants','Hoodie','Sneakers'],preferFits:['Fitted','Regular','Tailored']},
-    downtown:{subtypes:[...TOP_TYPES,...BOT_TYPES,...OUT_TYPES,...SHO_TYPES,...ACC_TYPES],preferSubtypes:['Leather jacket','Blazer','Trousers','Boots','Ankle boots'],avoidColors:['Pink','Baby pink','Blush','Lavender','Lilac']},
-    urbancore:{subtypes:[...TOP_TYPES,...BOT_TYPES,...OUT_TYPES,...SHO_TYPES],preferSubtypes:['Cargo','Joggers','Trousers','Jacket','Coat'],avoidColors:['Pink','Blush','Lavender','Yellow','Coral'],preferColors:['Black','Charcoal','Grey','Olive','Khaki']},
-    stargirl:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...ACC_TYPES,...SHO_TYPES],preferColors:['Silver','Gold','Lavender','Baby blue','White','Lilac','Pink'],avoidSubtypes:['Hoodie','Joggers','Sweatpants']},
-    messyitgirl:{subtypes:[...TOP_TYPES,...BOT_TYPES,...OUT_TYPES,...SHO_TYPES],preferFits:['Oversized','Loose','Relaxed'],avoidColors:['Blush','Lavender','Baby pink']},
-    romantic:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...OUT_TYPES,...ACC_TYPES],preferSubtypes:['Cardigan','Blouse','Skirt','Midi skirt','Dress','Midi dress','Coat'],avoidSubtypes:['Hoodie','Joggers','Sweatpants','Sneakers'],avoidColors:['Black','Charcoal']},
-    y2k:{subtypes:[...TOP_TYPES,...BOT_TYPES,...ACC_TYPES,...SHO_TYPES],preferSubtypes:['Crop top','Skirt','Mini skirt','Top'],preferColors:['Pink','Hot pink','Silver','Baby blue','Purple','Yellow','Fuchsia']},
-    boho:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...ACC_TYPES,...SHO_TYPES],preferSubtypes:['Maxi skirt','Midi skirt','Dress','Maxi dress','Blouse','Top'],avoidSubtypes:['Blazer','Suit','Joggers'],preferColors:['Brown','Tan','Rust','Olive','Terracotta','Cream','Mustard']},
-    dark:{subtypes:[...TOP_TYPES,...BOT_TYPES,...OUT_TYPES,...SHO_TYPES,...ACC_TYPES],preferSubtypes:['Blazer','Coat','Trousers','Boots'],preferColors:['Black','Charcoal','Brown','Burgundy','Navy','Olive'],avoidColors:['Pink','Yellow','Coral','Peach','Baby blue']},
-    sporty:{subtypes:[...TOP_TYPES,...BOT_TYPES,...SHO_TYPES],preferSubtypes:['Joggers','Leggings','Cycling shorts','Sneakers','Hoodie','Sweatshirt'],preferColors:['Black','White','Grey','Navy']},
-    preppy:{subtypes:[...TOP_TYPES,...BOT_TYPES,...OUT_TYPES,...SHO_TYPES,...ACC_TYPES],preferSubtypes:['Shirt','Blazer','Trousers','Loafers','Cardigan'],avoidSubtypes:['Joggers','Sweatpants','Hoodie']},
-    vintage:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...ACC_TYPES,...SHO_TYPES],preferColors:['Brown','Tan','Rust','Mustard','Olive','Burgundy','Terracotta'],avoidColors:['Neon','Silver','Gold']},
-    my:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...OUT_TYPES,...SHO_TYPES,...ACC_TYPES]},
+    minimal:{subtypes:[...TOP_TYPES,...BOT_TYPES,...SHO_TYPES],fits:['Fitted','Slim','Regular']},
+    streetwear:{subtypes:[...TOP_TYPES,...BOT_TYPES,...SHO_TYPES],fits:['Oversized','Relaxed','Regular']},
+    coastal:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...SHO_TYPES],fits:['Relaxed','Regular','Loose']},
+    oldmoney:{subtypes:[...TOP_TYPES,...BOT_TYPES,...OUT_TYPES,...SHO_TYPES],fits:['Fitted','Regular','Tailored']},
+    downtown:{subtypes:[...TOP_TYPES,...BOT_TYPES,...OUT_TYPES,...SHO_TYPES],fits:['Regular','Fitted','Relaxed']},
+    urbancore:{subtypes:[...TOP_TYPES,...BOT_TYPES,...OUT_TYPES,...SHO_TYPES],fits:['Oversized','Relaxed','Regular']},
+    stargirl:{subtypes:[...TOP_TYPES,...DRS_TYPES,...SHO_TYPES,...ACC_TYPES],fits:['Fitted','Regular','Flowy']},
+    romantic:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...OUT_TYPES],fits:['Regular','Relaxed','Fitted']},
+    sporty:{subtypes:[...TOP_TYPES,...BOT_TYPES,...SHO_TYPES],fits:['Regular','Fitted','Athletic']},
   };
 
-  const prefs=STYLE_PREFS[styleInfo.id]||STYLE_PREFS.my;
-  const paletteColors=styleInfo.palette;
+  const prefs=STYLE_PREFS[styleInfo.id]||{subtypes:[...TOP_TYPES,...BOT_TYPES],fits:[]};
+  const palette=styleInfo.palette||null;
 
-  function scoreItem(item){
-    let score=0;
-    // Palette match
-    if(paletteColors&&item.color&&paletteColors.includes(item.color))score+=3;
-    if(prefs.preferColors&&item.color&&prefs.preferColors.includes(item.color))score+=2;
-    if(prefs.avoidColors&&item.color&&prefs.avoidColors.includes(item.color))score-=4;
-    // Subtype match
-    if(prefs.preferSubtypes&&item.subtype&&prefs.preferSubtypes.includes(item.subtype))score+=3;
-    if(prefs.avoidSubtypes&&item.subtype&&prefs.avoidSubtypes.includes(item.subtype))score-=4;
-    // Fit match
-    if(prefs.preferFits&&item.fit&&prefs.preferFits.includes(item.fit))score+=2;
-    return score;
+  function colorScore(item){
+    if(!palette||!item.color)return 1;
+    return palette.some(p=>item.color.toLowerCase().includes(p.toLowerCase())||p.toLowerCase().includes(item.color.toLowerCase()))?3:0.2;
   }
 
-  // Filter to items that score >= 0 for this style
-  let styleItems=items.filter(i=>{
-    if(prefs.subtypes&&i.subtype&&!prefs.subtypes.includes(i.subtype))return false;
-    return scoreItem(i)>=0;
-  }).sort((a,b)=>scoreItem(b)-scoreItem(a));
+  function fitScore(item){
+    if(!prefs.fits.length||!item.fit)return 1;
+    return prefs.fits.includes(item.fit)?2:0.8;
+  }
 
-  // Fallback if too few items
-  if(styleItems.length<3)styleItems=[...items].sort((a,b)=>scoreItem(b)-scoreItem(a));
+  function scoreItem(item){
+    return colorScore(item)*fitScore(item)*(1+(item.wornCount||0)*0.1)+Math.random()*0.5;
+  }
 
-  const pick=arr=>arr.length?arr[Math.floor(Math.random()*arr.length)]:null;
-  const pickBest=arr=>{
-    // Weighted pick — higher scoring items more likely
+  function pickBest(arr){
     if(!arr.length)return null;
-    const scored=arr.map(i=>({item:i,score:scoreItem(i)+Math.random()*2})).sort((a,b)=>b.score-a.score);
-    return scored[0].item;
-  };
+    return arr.sort((a,b)=>scoreItem(b)-scoreItem(a))[0];
+  }
 
-  const tops=styleItems.filter(i=>TOP_TYPES.includes(i.subtype||''));
-  const bots=styleItems.filter(i=>BOT_TYPES.includes(i.subtype||''));
-  const outs=styleItems.filter(i=>OUT_TYPES.includes(i.subtype||''));
-  const drss=styleItems.filter(i=>DRS_TYPES.includes(i.subtype||''));
-  const shoe=styleItems.filter(i=>SHO_TYPES.includes(i.subtype||''));
-  const accs=styleItems.filter(i=>ACC_TYPES.includes(i.subtype||''));
+  const pool=items.filter(i=>prefs.subtypes.includes(i.subtype||'')||!prefs.subtypes.length);
+  const tops=pool.filter(i=>TOP_TYPES.includes(i.subtype||''));
+  const bots=pool.filter(i=>BOT_TYPES.includes(i.subtype||''));
+  const drss=pool.filter(i=>DRS_TYPES.includes(i.subtype||''));
+  const outs=pool.filter(i=>OUT_TYPES.includes(i.subtype||''));
+  const shoe=pool.filter(i=>SHO_TYPES.includes(i.subtype||''));
+  const accs=items.filter(i=>ACC_TYPES.includes(i.subtype||''));
 
   const usedIds=new Set();
   const outfits=[];
+
   for(let attempt=0;attempt<12&&outfits.length<3;attempt++){
     const outfit=[];
     const avail=arr=>arr.filter(i=>!usedIds.has(i.id));
+    const dressChance={stargirl:0.5,romantic:0.5,coastal:0.4}[styleInfo.id]||0.25;
 
-    // Core is always: dress/jumpsuit OR top+bottom — non-negotiable
-    const dressChance={coquette:0.6,boho:0.55,romantic:0.55,stargirl:0.4,vintage:0.4,coastal:0.35}[styleInfo.id]||0.25;
-    const hasDressAvail=avail(drss).length>0;
-    const hasTopAvail=avail(tops).length>0;
-    const hasBotAvail=avail(bots).length>0;
+    if(avail(drss).length&&Math.random()<dressChance){
+      const d=pickBest([...avail(drss)]);if(d)outfit.push(d);
+    } else if(avail(tops).length&&avail(bots).length){
+      const t=pickBest([...avail(tops)]);if(t)outfit.push(t);
+      const b=pickBest([...avail(bots)]);if(b&&!outfit.find(x=>x.id===b.id))outfit.push(b);
+    } else if(avail(drss).length){
+      const d=pickBest([...avail(drss)]);if(d)outfit.push(d);
+    } else continue;
 
-    if(hasDressAvail&&Math.random()<dressChance){
-      const d=pickBest(avail(drss));if(d)outfit.push(d);
-    } else if(hasTopAvail&&hasBotAvail){
-      const t=pickBest(avail(tops));if(t)outfit.push(t);
-      const b=pickBest(avail(bots));if(b&&!outfit.find(x=>x.id===b.id))outfit.push(b);
-    } else if(hasDressAvail){
-      const d=pickBest(avail(drss));if(d)outfit.push(d);
-    } else {
-      continue; // no valid core — skip this attempt
-    }
-
-    // Validate: must have dress OR (top AND bottom)
     const hasDressCore=outfit.some(i=>DRS_TYPES.includes(i.subtype||''));
     const hasTopCore=outfit.some(i=>TOP_TYPES.includes(i.subtype||''));
     const hasBotCore=outfit.some(i=>BOT_TYPES.includes(i.subtype||''));
     if(!hasDressCore&&!(hasTopCore&&hasBotCore))continue;
 
-    // Outerwear
-    const outerChance={'dark':0.7,'oldmoney':0.6,'downtown':0.65,'romantic':0.55,'preppy':0.6}[styleInfo.id]||0.35;
+    const outerChance={oldmoney:0.6,downtown:0.65,romantic:0.55,urbancore:0.7}[styleInfo.id]||0.35;
     if(avail(outs).length&&Math.random()<outerChance){
-      const o=pickBest(avail(outs));if(o&&!outfit.find(x=>x.id===o.id))outfit.push(o);
+      const o=pickBest([...avail(outs)]);if(o)outfit.push(o);
     }
-    if(avail(shoe).length){const s=pickBest(avail(shoe));if(s&&!outfit.find(x=>x.id===s.id))outfit.push(s);}
-
-    // Accessories
-    const accChance={'coquette':0.8,'boho':0.75,'stargirl':0.8,'y2k':0.75,'oldmoney':0.65,'preppy':0.6}[styleInfo.id]||0.4;
+    if(avail(shoe).length){const s=pickBest([...avail(shoe)]);if(s)outfit.push(s);}
+    const accChance={stargirl:0.8,romantic:0.7,oldmoney:0.65}[styleInfo.id]||0.4;
     if(avail(accs).length&&Math.random()<accChance){
-      const a=pickBest(avail(accs));if(a&&!outfit.find(x=>x.id===a.id))outfit.push(a);
+      const a=pickBest([...avail(accs)]);if(a)outfit.push(a);
     }
 
     outfits.push(outfit);
     outfit.forEach(i=>usedIds.add(i.id));
   }
 
-  if(!outfits.length){
-    results.innerHTML=`<div class="empty"><div class="ei">🎨</div><p>Not enough ${styleInfo.label} items in your wardrobe yet. Add more items or try another style!</p></div>`;
-    return;
-  }
-
-  const names=styleInfo.names||['Look 1','Look 2','Look 3'];
-
-  // General style advice shown once at the top
-  const generalTipsHtml=styleInfo.tips.slice(0,3).map(t=>`<div style="display:flex;gap:8px;margin-bottom:4px"><span style="color:var(--accent);flex-shrink:0">•</span><span style="font-size:12px;color:var(--text2);line-height:1.5">${t}</span></div>`).join('');
-
-  results.innerHTML=`
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:16px">
-      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">🔑 ${styleInfo.label} style guide</div>
-      ${generalTipsHtml}
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px">
-      ${outfits.map((outfit,i)=>{
-        const idStr=outfit.map(x=>x.id).join('|');
-        const outfitTips=getOutfitTip(outfit,styleInfo);
-        const itemsHtml=outfit.map(item=>{
-          const fp=(item.photos||[])[0]||null;
-          const h=hx(item.color),fg=isLight(h)?'#1a1705':'#faf9f6';
-          const cat=cats.find(c=>c.id===item.category)||{};
-          const matchScore=scoreItem(item);
-          return`<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--border)">
-            ${fp?`<img src="${fp}" style="width:42px;height:42px;border-radius:7px;object-fit:cover;flex-shrink:0">`:`<div style="width:42px;height:42px;border-radius:7px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;border:1px solid rgba(0,0,0,.07)">${cat.icon||'👕'}</div>`}
-            <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}</div>
-              <div style="font-size:10px;color:${matchScore>=3?'#3B9E57':matchScore>=1?'#C9A72A':'var(--text3)'};font-weight:600">${matchScore>=3?'✓ Great match':matchScore>=1?'〜 Works well':'Added for variety'}</div>
-            </div>
-          </div>`;
-        }).join('');
-        const outfitTipsHtml=outfitTips.map(t=>`<div style="display:flex;gap:7px;margin-bottom:4px"><span style="color:var(--accent);flex-shrink:0;font-size:11px">→</span><span style="font-size:12px;color:var(--text2);line-height:1.5">${t}</span></div>`).join('');
-        return`<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
-          <div style="padding:14px 14px 0">
-            <div style="font-family:'DM Serif Display',serif;font-size:16px;margin-bottom:2px">${names[i]||'Look '+(i+1)}</div>
-            <div style="font-size:11px;color:var(--text3);margin-bottom:10px">${styleInfo.label}</div>
-            ${itemsHtml}
-            ${outfitTipsHtml?`<div style="padding:10px;background:var(--bg2);border-radius:var(--r);margin:10px 0">${outfitTipsHtml}</div>`:''}
-          </div>
-          <div style="display:flex;gap:6px;padding:10px 14px">
-            <button class="btn sm pr" style="flex:1;justify-content:center" data-ids="${idStr}" data-tips="${encodeURIComponent(outfitTips.join('\n'))}" onclick="saveToIdeas(this.dataset.ids,this.dataset.tips)">+ Save to ideas</button>
-            <button class="btn sm" onclick="genStyleOutfits()" title="Regenerate all">🔀</button>
-          </div>
-        </div>`;
-      }).join('')}
+  return outfits.map((outfit,oi)=>{
+    const tips=getOutfitTip(outfit,styleInfo);
+    const outfitName=styleInfo.names[oi%styleInfo.names.length];
+    const itemCards=outfit.map(item=>{
+      const fp=(item.photos||[])[0];
+      const cat=cats.find(c=>c.id===item.category)||{};
+      const h=hx(item.color);const fg=isLight(h)?'#1a1705':'#faf9f6';
+      return`<div onclick="openDetail('${item.id}')" style="cursor:pointer;text-align:center;flex:1;min-width:70px;max-width:100px">
+        ${fp?`<img src="${fp}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;margin-bottom:4px">`:`<div style="width:100%;aspect-ratio:1;border-radius:8px;background:${h};display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:4px;color:${fg}">${cat.icon||'👕'}</div>`}
+        <div style="font-size:10px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}</div>
+        <div style="font-size:9px;color:var(--text3)">${item.subtype||''}</div>
+      </div>`;
+    }).join('');
+    const itemIds=outfit.map(i=>i.id);
+    return`<div class="card" style="padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:700">${outfitName}</div>
+        <button class="btn sm pr" onclick="saveInspoOutfit('${outfitName}','${styleInfo.id}',${JSON.stringify(itemIds)})">+ Save outfit</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${itemCards}</div>
+      ${tips.length?`<div style="border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:4px">${tips.map(t=>`<div style="font-size:11px;color:var(--text2)">💡 ${t}</div>`).join('')}</div>`:''}
     </div>`;
+  });
 }
+
 
 function saveToIdeas(idStr, tipsStr=''){
   const preIds=idStr.split('|').filter(Boolean);
@@ -1396,15 +1359,122 @@ function saveToIdeas(idStr, tipsStr=''){
 }
 
 // ── CALENDAR ──────────────────────────────────────────────────────────────────
-function rCal(){
-  sCH(`<div class="ch"><div class="cht">Wear calendar</div><div class="chs">${outfits.length} outfits logged</div></div>`);sFB('');
-  if(!outfits.length){sCt(`<div class="empty"><div class="ei">📅</div><p>Log outfits with dates to see them here.</p></div>`);return;}
-  const bm={};outfits.filter(o=>o.date).sort((a,b)=>b.date.localeCompare(a.date)).forEach(o=>{const d=new Date(o.date);const k=d.toLocaleString('default',{month:'long',year:'numeric'});if(!bm[k])bm[k]=[];bm[k].push(o);});
-  const nd=outfits.filter(o=>!o.date);
-  sCt(Object.entries(bm).map(([mo,outs])=>`<div style="margin-bottom:24px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">${mo}</div><div style="display:flex;flex-direction:column;gap:7px">${outs.map(o=>{const tg=(o.items||[]).map(id=>items.find(i=>i.id===id)).filter(Boolean);const d=new Date(o.date);const fp=(o.photos||[])[0]||null;return`<div class="card" onclick="openEditOutfit('${o.id}')" style="display:flex;align-items:center;gap:13px;padding:12px 14px"><div style="text-align:center;flex-shrink:0;width:36px"><div style="font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase">${d.toLocaleString('default',{weekday:'short'})}</div><div style="font-size:20px;font-weight:700;letter-spacing:-.04em">${d.getDate()}</div></div><div style="width:1px;height:32px;background:var(--border2);flex-shrink:0"></div>${fp?`<img src="${fp}" style="width:40px;height:40px;border-radius:7px;object-fit:cover;flex-shrink:0">`:`<div style="width:40px;height:40px;border-radius:7px;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📸</div>`}<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.name}</div><div style="font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tg.map(t=>t.name).join(', ')||'No items tagged'}</div></div>${o.occasion?`<span class="tg" style="flex-shrink:0">${o.occasion}</span>`:''}</div>`;}).join('')}</div></div>`).join('')+(nd.length?`<div style="margin-bottom:24px"><div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">No date</div><div style="display:flex;flex-direction:column;gap:7px">${nd.map(o=>{const fp=(o.photos||[])[0]||null;return`<div class="card" onclick="openEditOutfit('${o.id}')" style="display:flex;align-items:center;gap:13px;padding:12px 14px">${fp?`<img src="${fp}" style="width:40px;height:40px;border-radius:7px;object-fit:cover">`:`<div style="width:40px;height:40px;border-radius:7px;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:18px">📸</div>`}<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">${o.name}</div></div></div>`;}).join('')}</div></div>`:''));
+function rCal(tab){
+  if(!window._calTab)window._calTab=tab||'history';
+  if(tab)window._calTab=tab;
+  const isHistory=window._calTab==='history';
+
+  sCH(`<div class="ch"><div class="cht">${isHistory?'👗 Outfit history':'📅 Wear calendar'}</div><div class="chs">${isHistory?'What you wore, day by day':'Your outfit log'}</div></div>`);
+  sFB(`<div class="fb">
+    <div style="display:flex;gap:0;width:100%">
+      <button onclick="window._calTab='history';rCal()" style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:${isHistory?'var(--accent)':'var(--text3)'};border-bottom:${isHistory?'2px solid var(--accent)':'2px solid transparent'};font-family:'DM Sans',sans-serif">👗 Outfit history</button>
+      <button onclick="window._calTab='calendar';rCal()" style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:${!isHistory?'var(--accent)':'var(--text3)'};border-bottom:${!isHistory?'2px solid var(--accent)':'2px solid transparent'};font-family:'DM Sans',sans-serif">📅 Wear calendar</button>
+    </div>
+  </div>`);
+
+  if(isHistory){rHistoryContent();return;}
+  rCalContent();
 }
 
-// ── STATS ─────────────────────────────────────────────────────────────────────
+function rHistoryContent(){
+  const now=new Date();
+  if(window._histInited===undefined){
+    _histMonth=now.getMonth();
+    _histYear=now.getFullYear();
+    window._histInited=true;
+  }
+  const mo=_histMonth,yr=_histYear;
+  const daysInMonth=new Date(yr,mo+1,0).getDate();
+  const firstDay=(new Date(yr,mo,1).getDay()+6)%7;
+  const monthName=new Date(yr,mo,1).toLocaleString('default',{month:'long',year:'numeric'});
+  const lookup={};
+  outfits.filter(o=>o.wornDates?.length).forEach(o=>{
+    (o.wornDates||[]).forEach(d=>{if(!lookup[d])lookup[d]=[];lookup[d].push(o);});
+  });
+  outfits.filter(o=>o.date&&!o.wornDates?.length).forEach(o=>{
+    if(!lookup[o.date])lookup[o.date]=[];lookup[o.date].push(o);
+  });
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  let cells='';
+  for(let i=0;i<firstDay;i++)cells+=`<div></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr=`${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayOutfits=lookup[dateStr]||[];
+    const isToday=d===now.getDate()&&mo===now.getMonth()&&yr===now.getFullYear();
+    const hasOutfits=dayOutfits.length>0;
+    const photos=dayOutfits.map(o=>(o.photos||[])[0]).filter(Boolean);
+    cells+=`<div onclick="openDayLog('${dateStr}')" style="cursor:pointer;border-radius:10px;border:1.5px solid ${isToday?'var(--accent)':hasOutfits?'var(--border2)':'var(--border)'};background:${isToday?'var(--accent-soft,#f5f0e8)':hasOutfits?'var(--bg2)':'var(--bg)'};padding:6px;min-height:72px;display:flex;flex-direction:column;gap:3px">
+      <div style="font-size:11px;font-weight:${isToday?'700':'500'};color:${isToday?'var(--accent)':'var(--text2)'}">${d}</div>
+      ${photos.length?`<img src="${photos[0]}" style="width:100%;height:40px;object-fit:cover;border-radius:6px">`:hasOutfits?`<div style="font-size:18px;text-align:center;margin-top:4px">👗</div>`:''}
+      ${dayOutfits.length>1?`<div style="font-size:9px;color:var(--text3);text-align:right">+${dayOutfits.length-1}</div>`:''}
+    </div>`;
+  }
+  const thisMonthDates=Object.keys(lookup).filter(d=>d.startsWith(`${yr}-${String(mo+1).padStart(2,'0')}`));
+  const daysLogged=thisMonthDates.length;
+  const outfitsLogged=thisMonthDates.reduce((a,d)=>a+lookup[d].length,0);
+  sCt(`<div style="padding:14px 16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <button onclick="if(!(_histMonth===0&&_histYear===2025)){_histMonth--;if(_histMonth<0){_histMonth=11;_histYear--;}}rCal('history')" style="border:none;background:var(--bg2);border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;opacity:${_histMonth===0&&_histYear===2025?'0.3':'1'}">‹</button>
+      <div style="font-family:'DM Serif Display',serif;font-size:18px">${monthName}</div>
+      <button onclick="_histMonth++;if(_histMonth>11){_histMonth=0;_histYear++;}rCal('history')" style="border:none;background:var(--bg2);border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">›</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <div style="flex:1;background:var(--bg2);border-radius:var(--r);padding:10px 12px;text-align:center"><div style="font-size:20px;font-weight:700">${daysLogged}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Days logged</div></div>
+      <div style="flex:1;background:var(--bg2);border-radius:var(--r);padding:10px 12px;text-align:center"><div style="font-size:20px;font-weight:700">${outfitsLogged}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Outfits worn</div></div>
+      <div style="flex:1;background:var(--bg2);border-radius:var(--r);padding:10px 12px;text-align:center"><div style="font-size:20px;font-weight:700">${daysInMonth>0?Math.round(daysLogged/daysInMonth*100):0}%</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Coverage</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px">
+      ${days.map(d=>`<div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;padding:2px 0">${d}</div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${cells}</div>
+    <button class="btn pr" onclick="openDayLog('${now.toISOString().slice(0,10)}')" style="width:100%;margin-top:14px">+ Log today's outfit</button>
+  </div>`);
+}
+
+function rCalContent(){
+  const sorted=outfits.filter(o=>o.date||o.wornDates?.length).sort((a,b)=>{
+    const aDate=a.wornDates?.[a.wornDates.length-1]||a.date||'';
+    const bDate=b.wornDates?.[b.wornDates.length-1]||b.date||'';
+    return bDate.localeCompare(aDate);
+  });
+  if(!sorted.length){
+    sCt(`<div class="empty"><div class="ei">📅</div><p>No outfits logged yet.<br>Use Outfit history to log what you wear!</p></div>`);
+    return;
+  }
+  // Group by month
+  const groups={};
+  sorted.forEach(o=>{
+    const dates=o.wornDates?.length?o.wornDates:[o.date].filter(Boolean);
+    dates.forEach(d=>{
+      const key=d.slice(0,7);
+      if(!groups[key])groups[key]=[];
+      if(!groups[key].find(x=>x.id===o.id))groups[key].push({...o,_logDate:d});
+    });
+  });
+  const html=Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0])).map(([month,outs])=>{
+    const label=new Date(month+'-15').toLocaleString('default',{month:'long',year:'numeric'});
+    const cards=outs.map(o=>{
+      const tagged=(o.items||[]).map(id=>items.find(i=>i.id===id)).filter(Boolean);
+      const fp=(o.photos||[])[0]||tagged.map(i=>(i.photos||[])[0]).find(Boolean);
+      const date=new Date(o._logDate+'T12:00:00').toLocaleDateString('default',{weekday:'short',day:'numeric',month:'short'});
+      return`<div class="card" onclick="openDayLog('${o._logDate}')" style="display:flex;gap:10px;padding:10px;cursor:pointer;align-items:center">
+        ${fp?`<img src="${fp}" style="width:48px;height:48px;border-radius:8px;object-fit:cover;flex-shrink:0">`:`<div style="width:48px;height:48px;border-radius:8px;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">👗</div>`}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.name}</div>
+          <div style="font-size:11px;color:var(--text2)">${date}</div>
+          <div style="font-size:11px;color:var(--text3)">${tagged.slice(0,3).map(i=>i.name).join(', ')||'No items tagged'}</div>
+        </div>
+      </div>`;
+    }).join('');
+    return`<div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;padding:0 16px;margin-bottom:8px">${label}</div>
+      <div style="display:flex;flex-direction:column;gap:6px;padding:0 16px">${cards}</div>
+    </div>`;
+  }).join('');
+  sCt(`<div style="padding:14px 0">${html}</div>`);
+}
+
+
 function rStats(){
   sCH(`<div class="ch"><div class="cht">Insights</div><div class="chs">Your wardrobe at a glance</div></div>`);sFB('');
   if(!items.length){sCt('<div class="empty"><div class="ei">📊</div><p>Add items to see insights.</p></div>');return;}
@@ -1458,7 +1528,96 @@ function rStats(){
       ${ch('By brand',agg('brand'),'#C9A72A')}
     </div>
     ${tw.length?`<div class="cb"><div class="ct">Most worn</div>${tw.map(i=>`<div class="br"><div class="bl" style="width:120px">${i.name}</div><div class="bt"><div class="bf" style="width:${Math.round((i.wornCount||0)/tw[0].wornCount*100)}%;background:#378ADD"></div></div><div class="bc">${i.wornCount}</div></div>`).join('')}</div>`:''}
+    ${buildBalanceScore()}
   `);
+}
+
+function buildBalanceScore(){
+  if(items.length<5)return'';
+
+  // Define ideal ratios for a balanced wardrobe
+  const IDEAL={
+    'Tops':0.25,'Bottoms':0.20,'Dresses':0.12,'Outerwear':0.10,
+    'Footwear':0.10,'Accessories':0.12,'Other':0.11
+  };
+
+  const counts={
+    'Tops':items.filter(i=>TOP_TYPES.includes(i.subtype||'')).length,
+    'Bottoms':items.filter(i=>BOT_TYPES.includes(i.subtype||'')).length,
+    'Dresses':items.filter(i=>DRS_TYPES.includes(i.subtype||'')).length,
+    'Outerwear':items.filter(i=>OUT_TYPES.includes(i.subtype||'')).length,
+    'Footwear':items.filter(i=>SHO_TYPES.includes(i.subtype||'')).length,
+    'Accessories':items.filter(i=>ACC_TYPES.includes(i.subtype||'')).length,
+  };
+  counts['Other']=items.length-Object.values(counts).reduce((a,b)=>a+b,0);
+  if(counts['Other']<0)counts['Other']=0;
+
+  const total=items.length;
+  const EMOJIS={'Tops':'👕','Bottoms':'👖','Dresses':'👗','Outerwear':'🧥','Footwear':'👟','Accessories':'💎','Other':'📦'};
+  const COLORS={'Tops':'#185FA5','Bottoms':'#3B6D11','Dresses':'#7B1FA2','Outerwear':'#C9742A','Footwear':'#D85A30','Accessories':'#C9A72A','Other':'#888'};
+
+  // Calculate score per category
+  const scores=Object.entries(counts).map(([cat,count])=>{
+    const actual=count/total;
+    const ideal=IDEAL[cat]||0.1;
+    const ratio=actual/ideal;
+    let status,color,msg;
+    if(count===0){status='Missing';color='#D32F2F';msg=`You have no ${cat.toLowerCase()} — consider adding some`;}
+    else if(ratio<0.4){status='Low';color='#E64A19';msg=`Your ${cat.toLowerCase()} are underrepresented`;}
+    else if(ratio>2.5){status='High';color='#F57F17';msg=`You have a lot of ${cat.toLowerCase()} relative to the rest`;}
+    else if(ratio>1.6){status='Slightly high';color='#9E9D24';msg=`Slightly more ${cat.toLowerCase()} than ideal`;}
+    else{status='Balanced';color='#2E7D32';msg=`Your ${cat.toLowerCase()} are well balanced`;}
+    return{cat,count,actual,ideal,status,color,msg};
+  });
+
+  // Overall score — penalise missing or very low categories
+  const overallScore=Math.round(scores.reduce((a,s)=>{
+    const ratio=s.actual/s.ideal;
+    const catScore=ratio===0?0:ratio<0.4?40:ratio>2.5?70:ratio>1.6?85:100;
+    return a+catScore;
+  },0)/scores.length);
+
+  const scoreColor=overallScore>=85?'#2E7D32':overallScore>=65?'#F57F17':'#D32F2F';
+  const scoreLabel=overallScore>=85?'Well balanced':overallScore>=65?'Fairly balanced':'Needs attention';
+
+  return`<div class="cb" style="margin-top:10px">
+    <div class="ct">Category balance score</div>
+    <!-- Overall score -->
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;padding:12px;background:var(--bg2);border-radius:var(--r)">
+      <div style="position:relative;width:64px;height:64px;flex-shrink:0">
+        <svg viewBox="0 0 64 64" width="64" height="64">
+          <circle cx="32" cy="32" r="26" fill="none" stroke="var(--border2)" stroke-width="6"/>
+          <circle cx="32" cy="32" r="26" fill="none" stroke="${scoreColor}" stroke-width="6"
+            stroke-dasharray="${Math.round(overallScore*1.634)} 163.4"
+            stroke-dashoffset="40.8" stroke-linecap="round" transform="rotate(-90 32 32)"/>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:${scoreColor}">${overallScore}</div>
+      </div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:${scoreColor}">${scoreLabel}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">${items.length} items across all categories</div>
+      </div>
+    </div>
+    <!-- Category breakdown -->
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${scores.map(s=>`
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span>${EMOJIS[s.cat]}</span>
+              <span style="font-size:12px;font-weight:600">${s.cat}</span>
+              <span style="font-size:11px;color:var(--text3)">(${s.count})</span>
+            </div>
+            <span style="font-size:11px;font-weight:600;color:${s.color}">${s.status}</span>
+          </div>
+          <div style="height:6px;background:var(--border);border-radius:99px;overflow:hidden">
+            <div style="height:100%;width:${Math.min(100,Math.round(s.actual/s.ideal*100))}%;background:${COLORS[s.cat]};border-radius:99px;transition:width .3s"></div>
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-top:3px">${s.msg}</div>
+        </div>
+      `).join('')}
+    </div>
+  </div>`;
 }
 
 // ── SETTINGS ──────────────────────────────────────────────────────────────────
@@ -2154,95 +2313,6 @@ async function deleteCapsule(id){
 // ── OUTFIT HISTORY ────────────────────────────────────────────────────────────
 let _histMonth=null,_histYear=null;
 
-function rHistory(){
-  const now=new Date();
-  if(!_histMonth)_histMonth=now.getMonth();
-  if(!_histYear)_histYear=now.getFullYear();
-
-  sCH(`<div class="ch"><div class="cht">👗 Outfit history</div><div class="chs">What you wore, day by day</div></div>`);
-  sFB('');
-
-  const mo=_histMonth,yr=_histYear;
-  const daysInMonth=new Date(yr,mo+1,0).getDate();
-  const firstDay=(new Date(yr,mo,1).getDay()+6)%7; // Mon=0
-  const monthName=new Date(yr,mo,1).toLocaleString('default',{month:'long',year:'numeric'});
-
-  // Build lookup: date string → array of outfits worn that day
-  const lookup={};
-  outfits.filter(o=>o.wornDates?.length).forEach(o=>{
-    (o.wornDates||[]).forEach(d=>{
-      if(!lookup[d])lookup[d]=[];
-      lookup[d].push(o);
-    });
-  });
-
-  // Also check single o.date field for backwards compat
-  outfits.filter(o=>o.date&&!o.wornDates?.length).forEach(o=>{
-    if(!lookup[o.date])lookup[o.date]=[];
-    lookup[o.date].push(o);
-  });
-
-  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-
-  let cells='';
-  // Empty cells before first day
-  for(let i=0;i<firstDay;i++)cells+=`<div></div>`;
-  // Day cells
-  for(let d=1;d<=daysInMonth;d++){
-    const dateStr=`${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const dayOutfits=lookup[dateStr]||[];
-    const isToday=d===now.getDate()&&mo===now.getMonth()&&yr===now.getFullYear();
-    const hasOutfits=dayOutfits.length>0;
-    const photos=dayOutfits.map(o=>(o.photos||[])[0]).filter(Boolean);
-    cells+=`<div onclick="openDayLog('${dateStr}')" style="cursor:pointer;border-radius:10px;border:1.5px solid ${isToday?'var(--accent)':hasOutfits?'var(--border2)':'var(--border)'};background:${isToday?'var(--accent-soft, #f5f0e8)':hasOutfits?'var(--bg2)':'var(--bg)'};padding:6px;min-height:72px;display:flex;flex-direction:column;gap:3px;transition:border-color .15s">
-      <div style="font-size:11px;font-weight:${isToday?'700':'500'};color:${isToday?'var(--accent)':'var(--text2)'}">${d}</div>
-      ${photos.length?`<img src="${photos[0]}" style="width:100%;height:40px;object-fit:cover;border-radius:6px">`:
-        hasOutfits?`<div style="font-size:18px;text-align:center;margin-top:4px">${dayOutfits[0].name?dayOutfits[0].name[0]:'👗'}</div>`:
-        ''}
-      ${dayOutfits.length>1?`<div style="font-size:9px;color:var(--text3);text-align:right">+${dayOutfits.length-1}</div>`:''}
-    </div>`;
-  }
-
-  // Month stats
-  const thisMonthDates=Object.keys(lookup).filter(d=>d.startsWith(`${yr}-${String(mo+1).padStart(2,'0')}`));
-  const daysLogged=thisMonthDates.length;
-  const outfitsLogged=thisMonthDates.reduce((a,d)=>a+lookup[d].length,0);
-
-  sCt(`
-    <div style="padding:14px 16px">
-      <!-- Month nav -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <button onclick="_histMonth--;if(_histMonth<0){_histMonth=11;_histYear--;}rHistory()" style="border:none;background:var(--bg2);border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">‹</button>
-        <div style="font-family:'DM Serif Display',serif;font-size:18px">${monthName}</div>
-        <button onclick="_histMonth++;if(_histMonth>11){_histMonth=0;_histYear++;}rHistory()" style="border:none;background:var(--bg2);border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">›</button>
-      </div>
-      <!-- Stats row -->
-      <div style="display:flex;gap:8px;margin-bottom:14px">
-        <div style="flex:1;background:var(--bg2);border-radius:var(--r);padding:10px 12px;text-align:center">
-          <div style="font-size:20px;font-weight:700">${daysLogged}</div>
-          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Days logged</div>
-        </div>
-        <div style="flex:1;background:var(--bg2);border-radius:var(--r);padding:10px 12px;text-align:center">
-          <div style="font-size:20px;font-weight:700">${outfitsLogged}</div>
-          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Outfits worn</div>
-        </div>
-        <div style="flex:1;background:var(--bg2);border-radius:var(--r);padding:10px 12px;text-align:center">
-          <div style="font-size:20px;font-weight:700">${daysInMonth>0?Math.round(daysLogged/daysInMonth*100):0}%</div>
-          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Coverage</div>
-        </div>
-      </div>
-      <!-- Day headers -->
-      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px">
-        ${days.map(d=>`<div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;padding:2px 0">${d}</div>`).join('')}
-      </div>
-      <!-- Calendar grid -->
-      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${cells}</div>
-      <!-- Log button -->
-      <button class="btn pr" onclick="openDayLog('${now.toISOString().slice(0,10)}')" style="width:100%;margin-top:14px">+ Log today's outfit</button>
-    </div>
-  `);
-}
-
 function openDayLog(dateStr){
   const date=new Date(dateStr+'T12:00:00');
   const label=date.toLocaleDateString('default',{weekday:'long',day:'numeric',month:'long'});
@@ -2297,7 +2367,7 @@ async function addWornDate(outfitId,dateStr){
   await fbSave('outfits',o);
   showToast('Outfit logged ✓');
   if(window._renderDayLog)window._renderDayLog();
-  if(window._histMonth!==null)setTimeout(rHistory,300);
+  if(window._histMonth!==null)setTimeout(()=>rCal('history'),300);
 }
 
 async function removeWornDate(outfitId,dateStr){
@@ -2307,7 +2377,81 @@ async function removeWornDate(outfitId,dateStr){
   await fbSave('outfits',o);
   showToast('Removed ✓');
   if(window._renderDayLog)window._renderDayLog();
-  if(window._histMonth!==null)setTimeout(rHistory,300);
+  if(window._histMonth!==null)setTimeout(()=>rCal('history'),300);
+}
+
+// ── PACK LIST SAVE/LOAD ──────────────────────────────────────────────────────
+async function savePackList(){
+  const name=prompt('Name this pack list:');
+  if(!name)return;
+  // Collect item IDs from the current pack list display
+  const cards=[...document.querySelectorAll('[onclick^="openDetail"]')];
+  const itemIds=cards.map(el=>{
+    const m=el.getAttribute('onclick').match(/openDetail\('([^']+)'\)/);
+    return m?m[1]:null;
+  }).filter(Boolean);
+  const pack={
+    id:'pack-'+Date.now(),
+    name:name.trim(),
+    type:window._packType||'Holiday',
+    weather:window._packWeather||'Warm',
+    days:window._packDays||5,
+    formal:window._packFormal||false,
+    itemIds,
+    totalPieces:itemIds.length,
+    savedAt:Date.now(),
+  };
+  packlists.push(pack);
+  await fbSave('packlists',pack);
+  showToast('Pack list saved ✓');
+  rPack();
+}
+
+function viewPackList(id){
+  const pack=packlists.find(p=>p.id===id);
+  if(!pack)return;
+  const packItems=pack.itemIds.map(id=>items.find(i=>i.id===id)).filter(Boolean);
+  if(!packItems.length){showToast('No items found');return;}
+
+  const groups={};
+  packItems.forEach(i=>{
+    const role=TOP_TYPES.includes(i.subtype||'')?'👕 Tops':BOT_TYPES.includes(i.subtype||'')?'👖 Bottoms':DRS_TYPES.includes(i.subtype||'')?'👗 Dresses':OUT_TYPES.includes(i.subtype||'')?'🧥 Outerwear':SHO_TYPES.includes(i.subtype||'')?'👟 Footwear':ACC_TYPES.includes(i.subtype||'')?'💎 Accessories':'📦 Other';
+    if(!groups[role])groups[role]=[];
+    groups[role].push(i);
+  });
+
+  const html=`<div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <button class="btn sm" onclick="rPack()">← Back</button>
+      <div style="font-family:'DM Serif Display',serif;font-size:18px">${pack.name}</div>
+    </div>
+    <div style="background:var(--bg2);border-radius:var(--r);padding:12px 14px;margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <div style="text-align:center;flex:1"><div style="font-size:20px;font-weight:700">${pack.totalPieces}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Pieces</div></div>
+      <div style="width:1px;height:28px;background:var(--border2)"></div>
+      <div style="text-align:center;flex:1"><div style="font-size:20px;font-weight:700">${pack.days}d</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">${pack.type}</div></div>
+      <div style="width:1px;height:28px;background:var(--border2)"></div>
+      <div style="text-align:center;flex:1"><div style="font-size:20px;font-weight:700">${pack.weather}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Weather</div></div>
+    </div>
+    ${Object.entries(groups).map(([role,roleItems])=>`
+      <div style="margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:8px">${role} (${roleItems.length})</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
+          ${roleItems.map(i=>{const cat=cats.find(c=>c.id===i.category);const fp=(i.photos||[])[0]||null;return`<div class="card" onclick="openDetail('${i.id}')" style="padding:0;overflow:hidden;cursor:pointer">${fp?`<img src="${fp}" style="width:100%;height:90px;object-fit:cover">`:`<div style="width:100%;height:90px;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:28px">${cat?.icon||'👕'}</div>`}<div style="padding:6px 8px"><div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.name}</div><div style="font-size:10px;color:var(--text2)">${i.subtype||''}</div></div></div>`;}).join('')}
+        </div>
+      </div>
+    `).join('')}
+  </div>`;
+
+  // Show in main content area
+  sCt(`<div style="padding:14px 16px">${html}</div>`);
+}
+
+async function deletePackList(id){
+  if(!confirm('Delete this pack list?'))return;
+  packlists=packlists.filter(p=>p.id!==id);
+  await window.fbDel('packlists',id);
+  showToast('Deleted ✓');
+  rPack();
 }
 
 // ── CAPSULE WARDROBE BUILDER ──────────────────────────────────────────────────
@@ -2651,6 +2795,850 @@ function initTagPicker(existingTags=[]){
 }
 
 // ── TAG SEARCH IN ALL CLOTHES ─────────────────────────────────────────────────
+
+// ── PACK LIST GENERATOR ───────────────────────────────────────────────────────
+function rPack(){
+  sCH(`<div class="ch"><div class="cht">🧳 Pack list</div><div class="chs">Smart packing from your wardrobe</div></div>`);
+  sFB('');
+
+  const _days=window._packDays||5;
+  const _weather=window._packWeather||'Warm';
+  const _type=window._packType||'Holiday';
+  const _formal=window._packFormal||false;
+
+  sCt(`<div style="padding:14px 16px">
+    <!-- Settings -->
+    <div style="background:var(--bg2);border-radius:var(--rl);padding:16px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px">Trip details</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Trip type</label>
+          <select class="fsel" onchange="window._packType=this.value;rPack()" style="width:100%;height:34px;font-size:13px">
+            ${['Holiday','City break','Business','Weekend away','Beach','Festival','Wedding guest','Ski'].map(t=>`<option ${_type===t?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Weather</label>
+          <select class="fsel" onchange="window._packWeather=this.value;rPack()" style="width:100%;height:34px;font-size:13px">
+            ${['Hot','Warm','Mild','Cold','Mixed'].map(w=>`<option ${_weather===w?'selected':''}>${w}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Trip length: <span style="color:var(--text)">${_days} day${_days!==1?'s':''}</span></label>
+        <input type="range" min="1" max="21" value="${_days}" oninput="window._packDays=+this.value;this.previousElementSibling.querySelector('span').textContent=this.value+' day'+(this.value!='1'?'s':'')" onchange="rPack()" style="width:100%;accent-color:var(--accent)">
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+        <input type="checkbox" ${_formal?'checked':''} onchange="window._packFormal=this.checked;rPack()" style="accent-color:var(--accent)">
+        Include formal/evening outfits
+      </label>
+    </div>
+
+    <!-- Pack list result -->
+    ${buildPackList(_days,_weather,_type,_formal)}
+
+    ${packlists.length?`<div style="margin-top:20px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Saved lists</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${packlists.map(p=>`<div class="card" style="display:flex;align-items:center;gap:12px;padding:12px 14px">
+          <div style="font-size:24px">🧳</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600">${p.name}</div>
+            <div style="font-size:11px;color:var(--text2)">${p.type} · ${p.weather} · ${p.days} day${p.days!==1?'s':''} · ${p.totalPieces} pieces</div>
+            <div style="font-size:11px;color:var(--text3)">${new Date(p.savedAt).toLocaleDateString('default',{day:'numeric',month:'short',year:'numeric'})}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <button class="btn sm" onclick="viewPackList('${p.id}')">View</button>
+            <button class="btn sm dn" onclick="deletePackList('${p.id}')">✕</button>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`:''}
+  </div>`);
+}
+
+function buildPackList(days,weather,type,formal){
+  if(!items.length)return`<div class="empty"><div class="ei">👗</div><p>Add items to your wardrobe first.</p></div>`;
+
+  // Weather → seasons mapping
+  const weatherSeasons={Hot:['Summer','All-season'],Warm:['Summer','Spring','All-season'],Mild:['Spring','Autumn','All-season'],Cold:['Winter','Autumn','All-season'],Mixed:['Spring','Autumn','Summer','Winter','All-season']};
+  const okSeasons=weatherSeasons[weather]||['All-season'];
+
+  // Filter items by weather/season
+  const pool=items.filter(i=>!i.season||okSeasons.includes(i.season));
+
+  // Score item by relevance to trip type and weather
+  function score(item){
+    let s=(item.wornCount||0)*0.5;
+    const occ=(item.occasion||'').toLowerCase();
+    const sub=(item.subtype||'').toLowerCase();
+    if(type==='Business'&&['work','smart','formal'].some(k=>occ.includes(k)))s+=4;
+    if(type==='Beach'&&['swimwear','bikini','one-piece','sandals','shorts'].some(k=>sub.includes(k)))s+=4;
+    if(type==='Festival'&&['boho','casual','festival'].some(k=>occ.includes(k)))s+=3;
+    if(type==='Ski'&&['winter','cold'].some(k=>occ.includes(k)))s+=4;
+    if(weather==='Hot'&&['linen','cotton','shorts','mini','cami','tank','sundress'].some(k=>sub.includes(k)||occ.includes(k)))s+=3;
+    if(weather==='Cold'&&['wool','coat','puffer','knitwear','boots','sweater'].some(k=>sub.includes(k)||occ.includes(k)))s+=3;
+    if(item.condition==='Excellent'||item.condition==='Good')s+=1;
+    return s+Math.random()*0.5;
+  }
+
+  // Calculate quantities based on trip length
+  const outfitsPerDay=type==='Beach'?2:1;
+  const totalOutfits=Math.ceil(days*outfitsPerDay);
+  const topN=Math.min(Math.ceil(totalOutfits*0.7),pool.filter(i=>TOP_TYPES.includes(i.subtype||'')).length);
+  const botN=Math.min(Math.ceil(totalOutfits*0.4),pool.filter(i=>BOT_TYPES.includes(i.subtype||'')).length);
+  const drsN=Math.min(Math.ceil(totalOutfits*0.3),pool.filter(i=>DRS_TYPES.includes(i.subtype||'')).length);
+  const outN=Math.min(weather==='Cold'||weather==='Mixed'?Math.ceil(days*0.3):1,pool.filter(i=>OUT_TYPES.includes(i.subtype||'')).length);
+  const shoN=Math.min(type==='Beach'?3:type==='Ski'?2:Math.ceil(days/3)+1,pool.filter(i=>SHO_TYPES.includes(i.subtype||'')).length);
+  const accN=Math.min(Math.ceil(days*0.3)+1,pool.filter(i=>ACC_TYPES.includes(i.subtype||'')).length);
+  const swimN=(['Beach','Holiday'].includes(type))?Math.min(2,pool.filter(i=>['Swimwear','Bikini','One-piece'].includes(i.subtype||'')).length):0;
+
+  function pick(arr,n){return arr.filter(i=>pool.includes(i)).sort((a,b)=>score(b)-score(a)).slice(0,n);}
+
+  const sections=[
+    {label:'👕 Tops',items:pick(items.filter(i=>TOP_TYPES.includes(i.subtype||'')),topN),tip:`${topN} tops for ${days} days`},
+    {label:'👖 Bottoms',items:pick(items.filter(i=>BOT_TYPES.includes(i.subtype||'')),botN),tip:`Mix and match with your tops`},
+    {label:'👗 Dresses & One-pieces',items:pick(items.filter(i=>DRS_TYPES.includes(i.subtype||'')),drsN),tip:`Easy one-and-done outfits`},
+    {label:'🧥 Outerwear',items:pick(items.filter(i=>OUT_TYPES.includes(i.subtype||'')),outN),tip:`${weather==='Cold'?'Essential for the cold':'Just in case'}`},
+    {label:'👟 Footwear',items:pick(items.filter(i=>SHO_TYPES.includes(i.subtype||'')),shoN),tip:`${shoN} pairs should cover you`},
+    {label:'💎 Accessories',items:pick(items.filter(i=>ACC_TYPES.includes(i.subtype||'')),accN),tip:`Keep it light`},
+    ...(swimN>0?[{label:'🩱 Swimwear',items:pick(items.filter(i=>['Swimwear','Bikini','One-piece'].includes(i.subtype||'')),swimN),tip:`${swimN} for the beach/pool`}]:[]),
+    ...(formal?[{label:'✨ Evening / Formal',items:pick(items.filter(i=>['Evening gown','Cocktail dress','Party dress','Blazer','Suit'].includes(i.subtype||'')),Math.min(2,items.length)),tip:`For dinners and events`}]:[]),
+  ].filter(s=>s.items.length>0);
+
+  const totalPieces=sections.reduce((a,s)=>a+s.items.length,0);
+  const totalCombos=(sections.find(s=>s.label.includes('Tops'))?.items.length||0) * (sections.find(s=>s.label.includes('Bottoms'))?.items.length||0);
+
+  return`<div>
+    <!-- Summary -->
+    <div style="background:var(--bg2);border-radius:var(--r);padding:12px 14px;margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <div style="text-align:center;flex:1"><div style="font-size:20px;font-weight:700">${totalPieces}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Pieces</div></div>
+      <div style="width:1px;height:28px;background:var(--border2)"></div>
+      <div style="text-align:center;flex:1"><div style="font-size:20px;font-weight:700">${totalCombos}+</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Outfit combos</div></div>
+      <div style="width:1px;height:28px;background:var(--border2)"></div>
+      <div style="text-align:center;flex:1"><div style="font-size:20px;font-weight:700">${days}d</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">${type}</div></div>
+    </div>
+    <!-- Sections -->
+    ${sections.map(s=>`
+      <div style="margin-bottom:16px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:12px;font-weight:700;color:var(--text)">${s.label} <span style="font-weight:400;color:var(--text3)">(${s.items.length})</span></div>
+          <div style="font-size:11px;color:var(--text3)">${s.tip}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
+          ${s.items.map(i=>{
+            const cat=cats.find(c=>c.id===i.category);
+            const fp=(i.photos||[])[0]||null;
+            return`<div class="card" onclick="openDetail('${i.id}')" style="padding:0;overflow:hidden;cursor:pointer">
+              ${fp?`<img src="${fp}" style="width:100%;height:90px;object-fit:cover">`:`<div style="width:100%;height:90px;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:28px">${cat?.icon||'👕'}</div>`}
+              <div style="padding:6px 8px">
+                <div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.name}</div>
+                <div style="font-size:10px;color:var(--text2)">${i.subtype||''}</div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    `).join('')}
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn pr" style="flex:1" onclick="window._packSeed=Date.now();rPack()">🔀 Regenerate</button>
+      <button class="btn" style="flex:1;border:1px solid var(--border2)" onclick="savePackList()">💾 Save list</button>
+    </div>
+  </div>`;
+}
+
+function rTemplatesList(){
+  const presets=[
+    {name:'Work day',icon:'💼',slots:['Top','Bottom','Outerwear','Footwear','Accessory'],desc:'A polished office-ready formula'},
+    {name:'Weekend casual',icon:'☀️',slots:['Top','Bottom','Footwear'],desc:'Easy relaxed weekend look'},
+    {name:'Evening out',icon:'✨',slots:['Dress / One-piece','Footwear','Accessory'],desc:'A dressed-up night out formula'},
+    {name:'Smart casual',icon:'🎯',slots:['Top','Bottom','Outerwear','Footwear'],desc:'Elevated but not too formal'},
+    {name:'Gym to errands',icon:'🏃',slots:['Top','Bottom','Footwear'],desc:'Active wear that works outside the gym'},
+    {name:'Date night',icon:'💕',slots:['Dress / One-piece','Footwear','Accessory'],desc:'Effortlessly romantic'},
+  ];
+
+  sCt(`<div style="padding:14px 16px">
+    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Quick start</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:20px">
+      ${presets.map(p=>`<div class="card" onclick="useTemplate(${JSON.stringify(p).replace(/"/g,'&quot;')})" style="padding:12px;cursor:pointer">
+        <div style="font-size:22px;margin-bottom:6px">${p.icon}</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:2px">${p.name}</div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px">${p.desc}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px">${p.slots.map(s=>`<span style="font-size:10px;padding:2px 6px;border-radius:99px;background:var(--bg2);color:var(--text3)">${s}</span>`).join('')}</div>
+      </div>`).join('')}
+    </div>
+    ${templates.length?`<div>
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">My templates</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${templates.map(t=>`<div class="card" style="padding:12px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;margin-bottom:2px">${t.name}</div>
+              ${t.desc?`<div style="font-size:11px;color:var(--text2);margin-bottom:6px">${t.desc}</div>`:''}
+              <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px">${(t.slots||[]).map(s=>`<span style="font-size:10px;padding:2px 6px;border-radius:99px;background:var(--bg2);color:var(--text3)">${s}</span>`).join('')}</div>
+              <button class="btn sm pr" onclick="useTemplate(${JSON.stringify(t).replace(/"/g,'&quot;')})">Generate outfit</button>
+            </div>
+            <button class="btn sm dn" onclick="deleteTemplate('${t.id}')">✕</button>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`:''}
+  </div>`);
+}
+
+function openTemplateBuilder(){
+  let modal=gi('tmpl-build-modal');
+  if(!modal){modal=document.createElement('div');modal.id='tmpl-build-modal';modal.className='ov';document.body.appendChild(modal);}
+  _tmplSlots=[];
+  modal.innerHTML=`<div class="modal" style="max-width:420px">
+    <div class="mh"><h2 style="font-family:'DM Serif Display',serif;font-size:16px">📋 New template</h2><button class="btn gh sm" onclick="gi('tmpl-build-modal').style.display='none'">✕</button></div>
+    <div class="mb" style="max-height:70vh;overflow-y:auto">
+      <div class="fr" style="margin-bottom:10px">
+        <label style="font-size:12px;font-weight:600">Template name</label>
+        <input class="inp" id="tmpl-name" placeholder="e.g. Sunday morning, Travel day...">
+      </div>
+      <div class="fr" style="margin-bottom:10px">
+        <label style="font-size:12px;font-weight:600">Description</label>
+        <input class="inp" id="tmpl-desc" placeholder="What's this template for?">
+      </div>
+      <div class="fr" style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:600">Slots</label>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px" id="tmpl-slots-display"><span style="font-size:11px;color:var(--text3)">No slots selected yet</span></div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">
+          ${['Top','Bottom','Dress / One-piece','Outerwear','Footwear','Accessory','Hat','Bag','Jewellery'].map(s=>`<button type="button" onclick="toggleTemplateSlot('${s}')" id="tslot-${s.replace(/[^a-zA-Z]/g,'')}" style="padding:4px 10px;border-radius:99px;font-size:11px;border:1px solid var(--border2);background:var(--bg);cursor:pointer;font-family:'DM Sans',sans-serif">${s}</button>`).join('')}
+        </div>
+      </div>
+      <button class="btn pr" style="width:100%" onclick="saveTemplate()">Save template</button>
+    </div>
+  </div>`;
+  modal.style.display='flex';
+}
+
+// ── OUTFIT TEMPLATES ─────────────────────────────────────────────────────────
+function rTemplates(){
+  sCH(`<div class="ch"><div class="cht">📋 Outfit templates</div><div class="chs">Formulas for outfits that always work</div></div>`);
+  sFB('');
+
+  const presets=[
+    {name:'Work day',icon:'💼',slots:['Top','Bottom','Outerwear','Footwear','Accessory'],desc:'A polished office-ready formula'},
+    {name:'Weekend casual',icon:'☀️',slots:['Top','Bottom','Footwear'],desc:'Easy relaxed weekend look'},
+    {name:'Evening out',icon:'✨',slots:['Dress / One-piece','Footwear','Accessory'],desc:'A dressed-up night out formula'},
+    {name:'Smart casual',icon:'🎯',slots:['Top','Bottom','Outerwear','Footwear'],desc:'Elevated but not too formal'},
+    {name:'Gym to errands',icon:'🏃',slots:['Top','Bottom','Footwear'],desc:'Active wear that works outside the gym'},
+    {name:'Date night',icon:'💕',slots:['Dress / One-piece','Footwear','Accessory'],desc:'Effortlessly romantic'},
+  ];
+
+  sCt(`<div style="padding:14px 16px">
+    <!-- Preset templates -->
+    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Quick start templates</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:20px">
+      ${presets.map(p=>`<div class="card" onclick="useTemplate(${JSON.stringify(p).replace(/"/g,'&quot;')})" style="padding:12px;cursor:pointer">
+        <div style="font-size:24px;margin-bottom:6px">${p.icon}</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:2px">${p.name}</div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px">${p.desc}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px">${p.slots.map(s=>`<span style="font-size:10px;padding:2px 6px;border-radius:99px;background:var(--bg2);color:var(--text3)">${s}</span>`).join('')}</div>
+      </div>`).join('')}
+    </div>
+
+    <!-- Create custom template -->
+    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Create your own</div>
+    <div style="background:var(--bg2);border-radius:var(--rl);padding:16px;margin-bottom:20px">
+      <div class="fr" style="margin-bottom:10px">
+        <label style="font-size:12px;font-weight:600">Template name</label>
+        <input class="inp" id="tmpl-name" placeholder="e.g. Sunday morning, Travel day...">
+      </div>
+      <div class="fr" style="margin-bottom:10px">
+        <label style="font-size:12px;font-weight:600">Description</label>
+        <input class="inp" id="tmpl-desc" placeholder="What's this template for?">
+      </div>
+      <div class="fr" style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:600">Slots <span style="font-weight:400;color:var(--text3)">— what types of items does this outfit need?</span></label>
+        <div style="display:flex;flex-wrap:wrap;gap:5px" id="tmpl-slots-display"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">
+          ${['Top','Bottom','Dress / One-piece','Outerwear','Footwear','Accessory','Hat','Bag','Jewellery'].map(s=>`<button type="button" onclick="toggleTemplateSlot('${s}')" id="tslot-${s.replace(/[^a-zA-Z]/g,'')}" style="padding:4px 10px;border-radius:99px;font-size:11px;border:1px solid var(--border2);background:var(--bg);cursor:pointer;font-family:'DM Sans',sans-serif">${s}</button>`).join('')}
+        </div>
+      </div>
+      <button class="btn pr" style="width:100%" onclick="saveTemplate()">Save template</button>
+    </div>
+
+    <!-- Saved templates -->
+    ${templates.length?`<div>
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">My templates</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${templates.map(t=>`<div class="card" style="padding:12px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;margin-bottom:2px">${t.name}</div>
+              ${t.desc?`<div style="font-size:11px;color:var(--text2);margin-bottom:8px">${t.desc}</div>`:''}
+              <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px">${(t.slots||[]).map(s=>`<span style="font-size:10px;padding:2px 6px;border-radius:99px;background:var(--bg2);color:var(--text3)">${s}</span>`).join('')}</div>
+              <button class="btn sm pr" onclick="useTemplate(${JSON.stringify(t).replace(/"/g,'&quot;')})">Generate outfit</button>
+            </div>
+            <button class="btn sm dn" onclick="deleteTemplate('${t.id}')">✕</button>
+          </div>
+          <!-- Generated outfit suggestion if any -->
+          ${t._suggestion?`<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+            <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Suggested outfit</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">${t._suggestion}</div>
+          </div>`:''}
+        </div>`).join('')}
+      </div>
+    </div>`:''}
+  </div>`);
+
+  // init slot state
+  window._tmplSlots=window._tmplSlots||[];
+  renderTemplateSlots();
+}
+
+let _tmplSlots=[];
+
+function toggleTemplateSlot(slot){
+  if(_tmplSlots.includes(slot)){
+    _tmplSlots=_tmplSlots.filter(s=>s!==slot);
+  } else {
+    _tmplSlots.push(slot);
+  }
+  renderTemplateSlots();
+  // Update button style
+  document.querySelectorAll('[id^="tslot-"]').forEach(btn=>{
+    const s=btn.textContent;
+    const active=_tmplSlots.includes(s);
+    btn.style.background=active?'var(--accent)':'var(--bg)';
+    btn.style.color=active?'var(--afg)':'var(--text)';
+    btn.style.borderColor=active?'var(--accent)':'var(--border2)';
+  });
+}
+
+function renderTemplateSlots(){
+  const el=gi('tmpl-slots-display');
+  if(!el)return;
+  el.innerHTML=_tmplSlots.length
+    ?_tmplSlots.map((s,i)=>`<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:99px;background:var(--accent);color:var(--afg);font-size:11px">${s}<button type="button" onclick="_tmplSlots.splice(${i},1);renderTemplateSlots()" style="border:none;background:none;color:var(--afg);cursor:pointer;padding:0;font-size:13px">×</button></span>`).join('')
+    :`<span style="font-size:11px;color:var(--text3)">No slots selected yet</span>`;
+}
+
+async function saveTemplate(){
+  const name=(gi('tmpl-name')?.value||'').trim();
+  const desc=(gi('tmpl-desc')?.value||'').trim();
+  if(!name){showToast('Please enter a template name');return;}
+  if(!_tmplSlots.length){showToast('Please select at least one slot');return;}
+  const t={
+    id:'tmpl-'+Date.now(),
+    name,desc,
+    slots:[..._tmplSlots],
+    savedAt:Date.now(),
+  };
+  templates.push(t);
+  await fbSave('templates',t);
+  _tmplSlots=[];
+  showToast('Template saved ✓');
+  rTemplates();
+}
+
+async function deleteTemplate(id){
+  if(!confirm('Delete this template?'))return;
+  templates=templates.filter(t=>t.id!==id);
+  await window.fbDel('templates',id);
+  showToast('Deleted ✓');
+  rTemplates();
+}
+
+function useTemplate(tmpl){
+  // Map slot names to item type arrays
+  const slotMap={
+    'Top':items.filter(i=>TOP_TYPES.includes(i.subtype||'')),
+    'Bottom':items.filter(i=>BOT_TYPES.includes(i.subtype||'')),
+    'Dress / One-piece':items.filter(i=>DRS_TYPES.includes(i.subtype||'')),
+    'Outerwear':items.filter(i=>OUT_TYPES.includes(i.subtype||'')),
+    'Footwear':items.filter(i=>SHO_TYPES.includes(i.subtype||'')),
+    'Accessory':items.filter(i=>ACC_TYPES.includes(i.subtype||'')),
+    'Hat':items.filter(i=>['Hat','Cap','Beanie','Beret','Bucket hat'].includes(i.subtype||'')),
+    'Bag':items.filter(i=>['Bag','Handbag','Tote bag','Backpack','Clutch','Crossbody bag','Shoulder bag','Mini bag'].includes(i.subtype||'')),
+    'Jewellery':items.filter(i=>['Jewellery','Necklace','Earrings','Ring','Bracelet','Watch'].includes(i.subtype||'')),
+  };
+
+  const suggestion=tmpl.slots.map(slot=>{
+    const pool=slotMap[slot]||[];
+    if(!pool.length)return null;
+    const picked=pool[Math.floor(Math.random()*pool.length)];
+    const fp=(picked.photos||[])[0];
+    return`<div onclick="openDetail('${picked.id}')" style="cursor:pointer;text-align:center;width:80px">
+      ${fp?`<img src="${fp}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;margin-bottom:4px">`:`<div style="width:80px;height:80px;border-radius:8px;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:4px">${cats.find(c=>c.id===picked.category)?.icon||'👕'}</div>`}
+      <div style="font-size:10px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${picked.name}</div>
+      <div style="font-size:9px;color:var(--text3)">${slot}</div>
+    </div>`;
+  }).filter(Boolean).join('');
+
+  // Show result in a modal
+  let modal=gi('tmpl-modal');
+  if(!modal){modal=document.createElement('div');modal.id='tmpl-modal';modal.className='ov';document.body.appendChild(modal);}
+  modal.innerHTML=`<div class="modal" style="max-width:420px">
+    <div class="mh"><h2 style="font-family:'DM Serif Display',serif;font-size:16px">${tmpl.icon||'📋'} ${tmpl.name}</h2><button class="btn gh sm" onclick="gi('tmpl-modal').style.display='none'">✕</button></div>
+    <div class="mb">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:14px">${tmpl.desc||'Your outfit suggestion'}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px">${suggestion}</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" style="flex:1;border:1px solid var(--border2)" onclick="useTemplate(${JSON.stringify(tmpl).replace(/"/g,"'")})">🔀 Regenerate</button>
+        <button class="btn pr" style="flex:1" onclick="gi('tmpl-modal').style.display='none'">Done</button>
+      </div>
+    </div>
+  </div>`;
+  modal.style.display='flex';
+}
+
+function saveInspoOutfit(name, styleId, itemIds){
+  const style=STYLES.find(s=>s.id===styleId);
+  const outfit={
+    id:'out-'+Date.now(),
+    name:name+' ('+( style?.label.replace(/[^a-zA-Z ]/g,'').trim()||'Inspo')+')',
+    items:itemIds,
+    createdAt:Date.now(),
+    style:styleId,
+    photos:[],
+  };
+  outfits.push(outfit);
+  fbSave('outfits',outfit);
+  showToast('Outfit saved to Ideas ✓');
+}
+
+
+// ── MIX & MATCH BOARD ────────────────────────────────────────────────────────
+if(!window._mixBoard)window._mixBoard={};
+
+function getMixSlots(){return[
+  {id:'top',label:'Top',emoji:'👕',types:TOP_TYPES},
+  {id:'bottom',label:'Bottom',emoji:'👖',types:BOT_TYPES},
+  {id:'dress',label:'Dress',emoji:'👗',types:DRS_TYPES},
+  {id:'outer',label:'Outerwear',emoji:'🧥',types:OUT_TYPES},
+  {id:'shoes',label:'Shoes',emoji:'👟',types:SHO_TYPES},
+  {id:'acc',label:'Accessory',emoji:'💎',types:ACC_TYPES},
+];}
+
+function rMixMatch(){
+  const board=window._mixBoard;
+
+  const slots=getMixSlots().map(slot=>{
+    const item=board[slot.id]?items.find(i=>i.id===board[slot.id]):null;
+    const fp=item?(item.photos||[])[0]:null;
+    const cat=item?cats.find(c=>c.id===item.category):null;
+    return`<div style="display:flex;flex-direction:column;gap:6px">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;text-align:center">${slot.emoji} ${slot.label}</div>
+      <div onclick="openMixPicker('${slot.id}')" style="cursor:pointer;border-radius:12px;border:2px dashed ${item?'var(--accent)':'var(--border2)'};background:${item?'var(--bg2)':'var(--bg)'};aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;position:relative;transition:border-color .15s">
+        ${fp
+          ?`<img src="${fp}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0">`
+          :item
+            ?`<div style="font-size:32px">${cat?.icon||slot.emoji}</div><div style="font-size:10px;color:var(--text2);text-align:center;padding:0 6px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">${item.name}</div>`
+            :`<div style="font-size:28px;opacity:0.3">${slot.emoji}</div><div style="font-size:10px;color:var(--text3);margin-top:4px">Tap to pick</div>`
+        }
+        ${item?`<button onclick="event.stopPropagation();delete window._mixBoard['${slot.id}'];rMixMatch()" style="position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;border:none;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;z-index:1">×</button>`:''}
+      </div>
+      ${item?`<div style="font-size:11px;font-weight:500;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}</div>`:''}
+    </div>`;
+  }).join('');
+
+  const hasItems=Object.keys(board).length>0;
+
+  sCt(`<div style="padding:14px 16px">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+      ${slots}
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" style="flex:1;border:1px solid var(--border2)" onclick="window._mixBoard={};rMixMatch()" ${!hasItems?'disabled':''}>Clear</button>
+      <button class="btn pr" style="flex:2" onclick="saveMixOutfit()" ${!hasItems?'disabled':''}>💾 Save as outfit</button>
+    </div>
+    ${hasItems?`<button class="btn" style="width:100%;margin-top:8px;border:1px solid var(--border2)" onclick="randomiseMix()">🔀 Randomise empty slots</button>`:''}
+  </div>`);
+}
+
+function openMixPicker(slotId){
+  const slot=getMixSlots().find(s=>s.id===slotId);
+  if(!slot)return;
+  const pool=items.filter(i=>slot.types.includes(i.subtype||''));
+
+  let modal=gi('mix-picker-modal');
+  if(!modal){modal=document.createElement('div');modal.id='mix-picker-modal';modal.className='ov';document.body.appendChild(modal);}
+
+  const renderPicker=()=>{
+    const q=(gi('mix-search')?.value||'').toLowerCase();
+    const filtered=pool.filter(i=>!q||i.name.toLowerCase().includes(q)||( i.subtype||'').toLowerCase().includes(q));
+    modal.innerHTML=`<div class="modal" style="max-width:480px">
+      <div class="mh">
+        <h2 style="font-family:'DM Serif Display',serif;font-size:16px">${slot.emoji} Pick a ${slot.label}</h2>
+        <button class="btn gh sm" onclick="gi('mix-picker-modal').style.display='none'">✕</button>
+      </div>
+      <div class="mb" style="max-height:70vh;overflow-y:auto">
+        <input class="inp" id="mix-search" placeholder="Search..." oninput="renderMixPickerItems('${slotId}')" style="margin-bottom:10px">
+        <div id="mix-picker-items" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          ${filtered.map(i=>{
+            const fp=(i.photos||[])[0];
+            const cat=cats.find(c=>c.id===i.category);
+            const selected=window._mixBoard[slotId]===i.id;
+            return`<div onclick="selectMixItem('${slotId}','${i.id}')" style="cursor:pointer;border-radius:10px;border:2px solid ${selected?'var(--accent)':'var(--border)'};overflow:hidden;background:var(--bg)">
+              ${fp?`<img src="${fp}" style="width:100%;aspect-ratio:1;object-fit:cover">`:`<div style="width:100%;aspect-ratio:1;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:28px">${cat?.icon||slot.emoji}</div>`}
+              <div style="padding:6px 8px">
+                <div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.name}</div>
+                <div style="font-size:10px;color:var(--text3)">${i.subtype||''}</div>
+              </div>
+            </div>`;
+          }).join('')}
+          ${!filtered.length?`<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);font-size:13px">No ${slot.label.toLowerCase()}s found</div>`:''}
+        </div>
+      </div>
+    </div>`;
+    modal.style.display='flex';
+  };
+  window._renderMixPicker=renderPicker;
+  renderPicker();
+}
+
+function renderMixPickerItems(slotId){
+  const slot=getMixSlots().find(s=>s.id===slotId);
+  const q=(gi('mix-search')?.value||'').toLowerCase();
+  const pool=items.filter(i=>slot.types.includes(i.subtype||''));
+  const filtered=pool.filter(i=>!q||i.name.toLowerCase().includes(q));
+  const box=gi('mix-picker-items');
+  if(!box)return;
+  box.innerHTML=filtered.map(i=>{
+    const fp=(i.photos||[])[0];
+    const cat=cats.find(c=>c.id===i.category);
+    const selected=window._mixBoard[slotId]===i.id;
+    return`<div onclick="selectMixItem('${slotId}','${i.id}')" style="cursor:pointer;border-radius:10px;border:2px solid ${selected?'var(--accent)':'var(--border)'};overflow:hidden;background:var(--bg)">
+      ${fp?`<img src="${fp}" style="width:100%;aspect-ratio:1;object-fit:cover">`:`<div style="width:100%;aspect-ratio:1;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:28px">${cat?.icon||'👕'}</div>`}
+      <div style="padding:6px 8px"><div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.name}</div><div style="font-size:10px;color:var(--text3)">${i.subtype||''}</div></div>
+    </div>`;
+  }).join('');
+}
+
+function selectMixItem(slotId,itemId){
+  window._mixBoard[slotId]=itemId;
+  const modal=gi('mix-picker-modal');
+  if(modal)modal.style.display='none';
+  rMixMatch();
+}
+
+function randomiseMix(){
+  getMixSlots().forEach(slot=>{
+    if(!window._mixBoard[slot.id]){
+      const pool=items.filter(i=>slot.types.includes(i.subtype||''));
+      if(pool.length)window._mixBoard[slot.id]=pool[Math.floor(Math.random()*pool.length)].id;
+    }
+  });
+  rMixMatch();
+}
+
+async function saveMixOutfit(){
+  const name=prompt('Name this outfit:');
+  if(!name)return;
+  const itemIds=Object.values(window._mixBoard).filter(Boolean);
+  const outfit={
+    id:'out-'+Date.now(),
+    name:name.trim(),
+    items:itemIds,
+    createdAt:Date.now(),
+    photos:[],
+  };
+  outfits.push(outfit);
+  await fbSave('outfits',outfit);
+  showToast('Outfit saved ✓');
+  window._mixBoard={};
+  window._ideasTab='outfits';
+  rIdeas();
+}
+
+// ── VIRTUAL CLOSET ────────────────────────────────────────────────────────────
+function renderColourView(list){
+  // Colour order — rainbow gradient
+  const COLOUR_ORDER=[
+    // Whites & Creams
+    'Pure white','Warm white','Off-white','Ivory','Cream','Ecru','Pearl','Chalk','Linen','Parchment',
+    // Neutrals
+    'Nude beige','Wheat','Sand','Beige','Stone','Camel','Tan','Driftwood','Latte',
+    // Yellows
+    'Pale yellow','Cream yellow','Butter yellow','Lemon','Canary','Yellow','Sunshine','Golden yellow','Saffron','Honey','Mustard','Ochre','Gold',
+    // Oranges
+    'Apricot','Peach','Salmon','Coral','Terracotta','Tangerine','Orange','Pumpkin','Amber','Marigold','Burnt orange','Rust','Paprika',
+    // Browns
+    'Bronze','Copper','Cinnamon','Brown','Walnut','Chestnut','Auburn','Sienna','Mahogany','Chocolate','Mocha','Hazelnut','Toffee','Espresso',
+    // Reds
+    'Pale red','Light red','Tomato','Red','Crimson','Rose red','Brick red','Ruby','Cherry red','Wine','Maroon','Burgundy','Oxblood','Scarlet','Watermelon red',
+    // Pinks
+    'Ballet pink','Baby pink','Powder pink','Blush pink','Rose quartz','Flamingo','Candy pink','Strawberry','Hot pink','Pink','Cerise','Fuchsia','Magenta','Dusty rose','Mauve','Raspberry',
+    // Purples
+    'Pale lavender','Soft lilac','Lavender','Lilac','Orchid','Amethyst','Violet','Purple','Plum','Grape','Berry','Blackberry','Boysenberry',
+    // Blues
+    'Ice blue','Powder blue','Periwinkle','Baby blue','Light blue','Cornflower blue','Dusty blue','Blue','Royal blue','Cobalt blue','Indigo','Navy','Midnight blue','Dark navy',
+    // Teals & Cyans
+    'Turquoise','Aqua','Cyan','Teal','Aegean blue','Dark teal','Light teal',
+    // Greens
+    'Honeydew','Mint','Seafoam','Pistachio','Sage','Pale green','Lime green','Green','Jade','Emerald','Moss','Olive','Forest green','Dark green','Bottle green',
+    // Greys
+    'Light grey','Silver grey','Ash grey','Grey','Slate grey','Steel grey','Blue grey','Dark grey','Charcoal','Graphite',
+    // Black
+    'Soft black','Black','Washed black',
+    // Special
+    'Multicolor','Animal print','Floral print','Tie-dye','Iridescent','Holographic',
+  ];
+
+  // Colour group order — fashion-friendly progression
+  const COLOUR_GROUPS={
+    // Whites & creams
+    'Pure white':-100,'Snow white':-99,'Warm white':-98,'Off-white':-97,'Ivory':-96,'Cream':-95,'Ecru':-94,'Pearl':-93,'Chalk':-92,'Linen':-91,'Parchment':-90,
+    // Nudes & neutrals
+    'Nude beige':-80,'Wheat':-79,'Sand':-78,'Beige':-77,'Stone':-76,'Camel':-75,'Tan':-74,'Driftwood':-73,'Latte':-72,
+    // Reds
+    'Light pink red':0,'Red':1,'Bright red':2,'Dark red':3,'Crimson':4,'Scarlet':5,'Cherry red':6,'Tomato':7,'Coral red':8,'Orange red':9,'Hot red':10,'Rose red':11,'Watermelon':12,'Watermelon pink':13,
+    // Pinks
+    'Baby pink':20,'Powder pink':21,'Blush pink':22,'Soft pink':23,'Cotton candy':24,'Candy pink':25,'Flamingo':26,'Bubblegum':27,'Hot pink':28,'Pink':29,'Strawberry':30,'Cerise':31,'Cerise dark':32,'Deep rose':33,'Magenta red':34,'Raspberry':35,
+    // Magentas & fuchsias
+    'Fuchsia':40,'Magenta':41,'Deep fuchsia':42,'Cerise dark':43,
+    // Purples
+    'Soft lilac':50,'Lilac':51,'Lavender':52,'Wisteria':53,'Heather':54,'Pink lilac':55,'Thistle':56,'Soft purple':57,'Medium purple':58,'Amethyst':59,'Orchid':60,'Mauve purple':61,'Purple':62,'Violet':63,'Grape':64,'Dark purple':65,'Byzantium':66,'Plum':67,'Dark plum':68,'Blackberry':69,'Berry':70,'Eggplant':71,'Boysenberry':72,
+    // Mauves & dusty pinks
+    'Mauve':80,'Dusty rose':81,'Rose gold':82,'Antique pink':83,'Blush coral':84,
+    // Blues
+    'Periwinkle':90,'Cornflower blue':91,'Pale blue':92,'Baby blue':93,'Light blue':94,'Powder blue':95,'Sky blue':96,'Dusty blue':97,'Cadet blue':98,'Steel blue':99,'Blue grey':100,'Blue':101,'Bright blue':102,'Azure':103,'Royal blue':104,'Cobalt blue':105,'Sapphire':106,'Indigo':107,'Storm blue':108,'Denim':109,'Dark indigo':110,'Navy':111,'Midnight blue':112,'Dark navy':113,'Deep navy':114,
+    // Teals & cyans
+    'Electric blue':120,'Cyan':121,'Aqua':122,'Turquoise':123,'Cadet blue':124,'Aegean blue':125,'Cerulean':126,'Peacock blue':127,'Petrol':128,'Ocean teal':129,'Teal':130,'Dark teal':131,'Light teal':132,'Mint':133,'Pine green':134,'Bottle green':135,
+    // Greens
+    'Seafoam':140,'Pale green':141,'Eucalyptus':142,'Honeydew':143,'Light sage':144,'Pistachio':145,'Sage':146,'Fern':147,'Kelly green':148,'Lime green':149,'Green':150,'Jade':151,'Emerald':152,'Forest green':153,'Dark green':154,'Hunter green':155,'Muted green':156,
+    // Olive & khaki
+    'Light chartreuse':160,'Chartreuse':161,'Khaki':162,'Khaki green':163,'Khaki':164,'Army green':165,'Moss':166,'Olive':167,'Dark olive':168,
+    // Yellows
+    'Pale yellow':170,'Butter yellow':171,'Lemon':172,'Canary':173,'Yellow':174,'Sunshine':175,'Cream yellow':176,
+    // Golds & ambers
+    'Golden yellow':180,'Saffron':181,'Honey':182,'Amber':183,'Marigold':184,'Gold':185,'Dark gold':186,'Mustard':187,'Dark mustard':188,'Ochre':189,
+    // Oranges
+    'Tangerine':190,'Orange':191,'Pumpkin':192,'Burnt orange':193,'Paprika':194,'Rust':195,'Terracotta':196,'Coral':197,'Salmon':198,'Apricot':199,'Peach red':200,'Light apricot':201,'Melon':202,'Dusty coral':203,
+    // Browns
+    'Cinnamon':210,'Copper':211,'Bronze':212,'Sienna':213,'Burnt sienna':214,'Chestnut':215,'Auburn':216,'Brown':217,'Walnut':218,'Hazelnut':219,'Toffee':220,'Mocha':221,'Sepia':222,'Russet':223,'Cognac':224,'Mahogany':225,'Chocolate':226,'Espresso':227,
+    // Greys
+    'Silver':230,'Silver grey':231,'Light grey':232,'Ash grey':233,'Grey':234,'Mid grey':235,'Cool grey':236,'Blue grey':237,'Steel grey':238,'Slate grey':239,'Dark grey':240,'Charcoal':241,'Graphite':242,'Soft black':243,
+    // Blacks
+    'Black':250,'Washed black':251,
+  };
+
+  function getColourSort(color){
+    if(!color)return 9999;
+    // Exact match first
+    if(COLOUR_GROUPS[color]!==undefined)return COLOUR_GROUPS[color];
+    // Partial match
+    const cl=color.toLowerCase();
+    const key=Object.keys(COLOUR_GROUPS).find(k=>k.toLowerCase()===cl||cl.includes(k.toLowerCase())||k.toLowerCase().includes(cl));
+    if(key)return COLOUR_GROUPS[key];
+    // Fallback: use hue
+    const h=hx(color);
+    if(!h||h==='#e0e0e0')return 9998;
+    try{
+      const r=parseInt(h.slice(1,3),16)/255,g=parseInt(h.slice(3,5),16)/255,b=parseInt(h.slice(5,7),16)/255;
+      const mx=Math.max(r,g,b),mn=Math.min(r,g,b);
+      const l=(mx+mn)/2;
+      const s=mx===mn?0:(l>0.5?(mx-mn)/(2-mx-mn):(mx-mn)/(mx+mn));
+      if(l>0.88&&s<0.15)return -50;
+      if(s<0.10&&l>0.15)return 232;
+      if(l<0.15&&s<0.25)return 248;
+      let hue=0;
+      if(mx!==mn){
+        if(mx===r)hue=((g-b)/(mx-mn)+6)%6*60;
+        else if(mx===g)hue=((b-r)/(mx-mn)+2)*60;
+        else hue=((r-g)/(mx-mn)+4)*60;
+      }
+      // Map hue to our fashion order: pinks→purples→blues→greens→yellows→oranges
+      if(hue>=300||hue<10)return 15; // reds/pinks
+      if(hue>=250)return 55; // purples
+      if(hue>=180)return 100; // blues
+      if(hue>=90)return 150; // greens
+      if(hue>=50)return 175; // yellows
+      return 195; // oranges
+    }catch{return 9998;}
+  }
+
+  const sorted=[...list].sort((a,b)=>getColourSort(a.color)-getColourSort(b.color));
+
+
+  // Group by colour
+  const groups={};
+  sorted.forEach(item=>{
+    const key=item.color||'No colour';
+    if(!groups[key])groups[key]=[];
+    groups[key].push(item);
+  });
+
+  const swatches=Object.entries(groups).map(([color,groupItems])=>{
+    const h=hx(color);
+    const fg=isLight(h)?'#1a1705':'#faf9f6';
+    const cards=groupItems.map(item=>{
+      const fp=(item.photos||[])[0];
+      const cat=cats.find(c=>c.id===item.category);
+      return`<div onclick="openDetail('${item.id}')" style="cursor:pointer;flex-shrink:0;width:80px">
+        <div style="width:80px;height:80px;border-radius:10px;overflow:hidden;border:1px solid var(--border);box-shadow:0 2px 6px rgba(0,0,0,.08)">
+          ${fp?`<img src="${fp}" style="width:100%;height:100%;object-fit:cover">`:`<div style="width:100%;height:100%;background:${h};display:flex;align-items:center;justify-content:center;font-size:24px;color:${fg}">${cat?.icon||'👕'}</div>`}
+        </div>
+        <div style="font-size:9px;font-weight:500;text-align:center;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)">${item.name}</div>
+      </div>`;
+    }).join('');
+
+    return`<div style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:0 16px">
+        <div style="width:20px;height:20px;border-radius:50%;background:${h};border:1px solid var(--border);flex-shrink:0"></div>
+        <div style="font-size:12px;font-weight:700">${color}</div>
+        <div style="font-size:11px;color:var(--text3)">${groupItems.length} item${groupItems.length!==1?'s':''}</div>
+      </div>
+      <div style="padding:0 16px">
+        <div style="display:flex;flex-wrap:wrap;gap:8px">${cards}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Colour palette summary at the top
+  const colourCount=Object.keys(groups).length;
+  const topColours=Object.entries(groups).sort((a,b)=>b[1].length-a[1].length).slice(0,8);
+  const palette=topColours.map(([color])=>{
+    const h=hx(color);
+    return`<div title="${color}" style="width:28px;height:28px;border-radius:50%;background:${h};border:2px solid var(--bg);box-shadow:0 1px 4px rgba(0,0,0,.15);flex-shrink:0"></div>`;
+  }).join('');
+
+  return`<div>
+    <div style="padding:14px 16px 10px;border-bottom:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${colourCount} colours in your wardrobe</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">${palette}</div>
+    </div>
+    <div style="padding:16px 0">${swatches}</div>
+  </div>`;
+}
+
+function renderClosetView(list){
+  const TYPE_RAILS=[
+    {label:'Tops',emoji:'👕',filter:i=>TOP_TYPES.includes(i.subtype||'')},
+    {label:'Bottoms',emoji:'👖',filter:i=>BOT_TYPES.includes(i.subtype||'')},
+    {label:'Dresses & One-pieces',emoji:'👗',filter:i=>DRS_TYPES.includes(i.subtype||'')},
+    {label:'Outerwear',emoji:'🧥',filter:i=>OUT_TYPES.includes(i.subtype||'')},
+    {label:'Footwear',emoji:'👟',filter:i=>SHO_TYPES.includes(i.subtype||'')},
+    {label:'Accessories',emoji:'💎',filter:i=>ACC_TYPES.includes(i.subtype||'')},
+    {label:'Other',emoji:'📦',filter:i=>!TOP_TYPES.includes(i.subtype||'')&&!BOT_TYPES.includes(i.subtype||'')&&!DRS_TYPES.includes(i.subtype||'')&&!OUT_TYPES.includes(i.subtype||'')&&!SHO_TYPES.includes(i.subtype||'')&&!ACC_TYPES.includes(i.subtype||'')},
+  ];
+
+  const rails=TYPE_RAILS.map(rail=>{
+    const railItems=list.filter(rail.filter);
+    if(!railItems.length)return'';
+    const itemCards=railItems.map(item=>{
+      const fp=(item.photos||[])[0];
+      const cat=cats.find(c=>c.id===item.category);
+      const h=hx(item.color||'');
+      const fg=isLight(h)?'#1a1705':'#faf9f6';
+      return`<div onclick="openDetail('${item.id}')" style="cursor:pointer;flex-shrink:0;width:100px;display:flex;flex-direction:column;align-items:center">
+        <svg width="40" height="16" viewBox="0 0 40 16">
+          <path d="M20,2 Q20,0 22,0 Q26,0 26,4 Q26,6 20,8 Q14,6 14,4 Q14,0 18,0 Q20,0 20,2" fill="none" stroke="var(--text3)" stroke-width="1.2"/>
+          <path d="M20,8 L4,14 Q2,15 2,16 L38,16 Q38,15 36,14 Z" fill="none" stroke="var(--text3)" stroke-width="1.2"/>
+        </svg>
+        <div style="width:90px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--bg);box-shadow:0 2px 8px rgba(0,0,0,.06)">
+          ${fp?`<img src="${fp}" style="width:100%;height:110px;object-fit:cover;display:block">`:`<div style="width:100%;height:110px;background:${h};display:flex;align-items:center;justify-content:center;font-size:32px;color:${fg}">${cat?.icon||rail.emoji}</div>`}
+          <div style="padding:6px 8px">
+            <div style="font-size:10px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}</div>
+            <div style="font-size:9px;color:var(--text3)">${item.subtype||''}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    return`<div style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:8px;padding:0 16px;margin-bottom:8px">
+        <span style="font-size:16px">${rail.emoji}</span>
+        <span style="font-size:13px;font-weight:700">${rail.label}</span>
+        <span style="font-size:11px;color:var(--text3)">(${railItems.length})</span>
+      </div>
+      <div style="padding:0 16px">
+        <div style="height:4px;background:linear-gradient(90deg,transparent,var(--text2) 10%,var(--text2) 90%,transparent);border-radius:99px;box-shadow:0 2px 4px rgba(0,0,0,.15)"></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;padding:8px 0 12px">${itemCards}</div>
+      </div>
+    </div>`;
+  }).filter(Boolean).join('');
+
+  return`<div style="padding:16px 0">${rails||'<div class="empty"><div class="ei">👗</div><p>No items match.</p></div>'}</div>`;
+}
+
+function rCloset(){
+  sCH(`<div class="ch"><div class="cht">🚪 Virtual closet</div><div class="chs">Your wardrobe at a glance</div></div>`);
+
+  // Category filter pills
+  const allCatIds=[...new Set(items.map(i=>i.category).filter(Boolean))];
+  const availCats=cats.filter(c=>allCatIds.includes(c.id));
+  const activeCat=window._closetCat||'all';
+
+  sFB(`<div style="overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;border-bottom:1px solid var(--border)">
+    <div style="display:flex;gap:6px;padding:10px 16px;width:max-content">
+      <button onclick="window._closetCat='all';rCloset()" style="padding:4px 12px;border-radius:99px;border:1px solid var(--border2);background:${activeCat==='all'?'var(--accent)':'var(--bg)'};color:${activeCat==='all'?'var(--afg)':'var(--text2)'};cursor:pointer;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif;white-space:nowrap">All</button>
+      ${availCats.map(c=>`<button onclick="window._closetCat='${c.id}';rCloset()" style="padding:4px 12px;border-radius:99px;border:1px solid var(--border2);background:${activeCat===c.id?'var(--accent)':'var(--bg)'};color:${activeCat===c.id?'var(--afg)':'var(--text2)'};cursor:pointer;font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif;white-space:nowrap">${c.icon||''} ${c.name}</button>`).join('')}
+    </div>
+  </div>`);
+
+  if(!items.length){
+    sCt(`<div class="empty"><div class="ei">🚪</div><p>Add items to your wardrobe to see your virtual closet!</p></div>`);
+    return;
+  }
+
+  // Group items by type category
+  const TYPE_RAILS=[
+    {label:'Tops',emoji:'👕',filter:i=>TOP_TYPES.includes(i.subtype||'')},
+    {label:'Bottoms',emoji:'👖',filter:i=>BOT_TYPES.includes(i.subtype||'')},
+    {label:'Dresses & One-pieces',emoji:'👗',filter:i=>DRS_TYPES.includes(i.subtype||'')},
+    {label:'Outerwear',emoji:'🧥',filter:i=>OUT_TYPES.includes(i.subtype||'')},
+    {label:'Footwear',emoji:'👟',filter:i=>SHO_TYPES.includes(i.subtype||'')},
+    {label:'Accessories',emoji:'💎',filter:i=>ACC_TYPES.includes(i.subtype||'')},
+  ];
+
+  const pool=activeCat==='all'?items:items.filter(i=>i.category===activeCat);
+
+  const rails=TYPE_RAILS.map(rail=>{
+    const railItems=pool.filter(rail.filter);
+    if(!railItems.length)return'';
+
+    const itemCards=railItems.map(item=>{
+      const fp=(item.photos||[])[0];
+      const cat=cats.find(c=>c.id===item.category);
+      const h=hx(item.color||'');
+      const fg=isLight(h)?'#1a1705':'#faf9f6';
+      const worn=item.wornCount||0;
+      return`<div onclick="openDetail('${item.id}')" style="cursor:pointer;flex-shrink:0;width:100px;display:flex;flex-direction:column;align-items:center;gap:0">
+        <!-- Hanger -->
+        <svg width="40" height="18" viewBox="0 0 40 18" style="flex-shrink:0">
+          <path d="M20,2 Q20,0 22,0 Q26,0 26,4 Q26,7 20,9 Q14,7 14,4 Q14,0 18,0 Q20,0 20,2" fill="none" stroke="var(--text3)" stroke-width="1.2"/>
+          <path d="M20,9 L4,16 Q2,17 2,18 L38,18 Q38,17 36,16 Z" fill="none" stroke="var(--text3)" stroke-width="1.2"/>
+        </svg>
+        <!-- Item -->
+        <div style="width:90px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--bg);box-shadow:0 2px 8px rgba(0,0,0,.06)">
+          ${fp
+            ?`<img src="${fp}" style="width:100%;height:110px;object-fit:cover;display:block">`
+            :`<div style="width:100%;height:110px;background:${h};display:flex;align-items:center;justify-content:center;font-size:32px;color:${fg}">${cat?.icon||rail.emoji}</div>`
+          }
+          <div style="padding:6px 8px;background:var(--bg)">
+            <div style="font-size:10px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${item.name}</div>
+            <div style="font-size:9px;color:var(--text3);margin-top:1px">${item.subtype||''}</div>
+            ${worn>0?`<div style="font-size:9px;color:var(--text3)">Worn ${worn}×</div>`:''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    return`<div style="margin-bottom:24px">
+      <!-- Rail header -->
+      <div style="display:flex;align-items:center;gap:8px;padding:0 16px;margin-bottom:8px">
+        <span style="font-size:16px">${rail.emoji}</span>
+        <span style="font-size:13px;font-weight:700">${rail.label}</span>
+        <span style="font-size:11px;color:var(--text3)">(${railItems.length})</span>
+      </div>
+      <!-- Hanging rail bar -->
+      <div style="position:relative;padding:0 16px">
+        <div style="height:3px;background:linear-gradient(90deg,var(--border2),var(--text3) 20%,var(--text3) 80%,var(--border2));border-radius:99px;margin-bottom:0"></div>
+        <!-- Items hanging from rail -->
+        <div style="display:flex;flex-wrap:wrap;gap:8px;padding-top:4px;padding-bottom:8px">
+          ${itemCards}
+        </div>
+      </div>
+    </div>`;
+  }).filter(Boolean).join('');
+
+  sCt(`<div style="padding:16px 0">${rails||`<div class="empty"><div class="ei">👗</div><p>No items in this category.</p></div>`}</div>`);
+}
+
 </script>
 </body>
 </html>
