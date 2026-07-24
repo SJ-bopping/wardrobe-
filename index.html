@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 function startListeners(){
   _uns.forEach(u=>u());_uns=[];
-  let loaded={items:false,outfits:false,wishlist:false,ideas:false,cats:false,capsules:false,packlists:false,templates:false};
+  let loaded={items:false,outfits:false,wishlist:false,ideas:false,cats:false,packlists:false,templates:false};
   function chk(){if(Object.values(loaded).every(Boolean)){window._dataReady=true;[100,400,800].forEach(ms=>setTimeout(()=>{if(typeof renderCurrent==='function'){updateBadges();renderCurrent();}},ms));}}
   const sub=(col,fn,key)=>db.collection('users').doc(_uid).collection(col).onSnapshot(snap=>{fn(snap.docs.map(d=>d.data()));if(!loaded[key]){loaded[key]=true;chk();}else if(typeof updateBadges==='function')updateBadges();});
   _uns.push(sub('items',d=>{items=d;},'items'));
@@ -33,7 +33,6 @@ function startListeners(){
   _uns.push(sub('wishlist',d=>{wishlist=d;},'wishlist'));
   _uns.push(sub('ideas',d=>{ideas=d;},'ideas'));
   _uns.push(sub('cats',d=>{cats=d;if(!cats.length)seedCats();},'cats'));
-  _uns.push(sub('capsules',d=>{capsules=d;},'capsules'));
   _uns.push(sub('packlists',d=>{packlists=d;},'packlists'));
   _uns.push(sub('templates',d=>{templates=d;},'templates'));
 
@@ -233,10 +232,12 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
   <div class="ab">
     <h1>👗 Wardrobe</h1>
     <p>Your synced digital closet</p>
-    <input class="ai" type="email" id="au-e" placeholder="Email address" autocomplete="email">
-    <input class="ai" type="password" id="au-p" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
-    <div style="height:1px;background:var(--border);margin:12px 0;"></div>
-    <div class="abts"><button onclick="doLogin()">Log in</button><button class="ap" onclick="doSignup()">Sign up</button></div>
+    <form onsubmit="event.preventDefault();doLogin()" autocomplete="on">
+      <input class="ai" type="email" id="au-e" name="email" placeholder="Email address" autocomplete="email">
+      <input class="ai" type="password" id="au-p" name="password" placeholder="Password" autocomplete="current-password">
+      <div style="height:1px;background:var(--border);margin:12px 0;"></div>
+      <div class="abts"><button type="submit">Log in</button><button type="button" class="ap" onclick="doSignup()">Sign up</button></div>
+    </form>
     <div class="aerr" id="au-err"></div>
   </div>
 </div>
@@ -264,7 +265,7 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
       <span class="nl">Analyse</span>
       <button class="nb" id="nav-stats" onclick="nav('stats')"><span class="ni">📊</span>Insights</button>
       <button class="nb" id="nav-calendar" onclick="nav('calendar')"><span class="ni">📅</span>Wear calendar</button>
-      <button class="nb" id="nav-capsule" onclick="nav('capsule')"><span class="ni">✨</span>Capsule builder</button>
+
       <button class="nb" id="nav-pack" onclick="nav('pack')"><span class="ni">🧳</span>Pack list</button>
 
       <button class="nb" id="nav-glossary" onclick="nav('glossary')"><span class="ni">📖</span>Style glossary</button>
@@ -337,7 +338,7 @@ async function uploadPhotos(files){
 }
 
 // ── DATA ──────────────────────────────────────────────────────────────────────
-let items=[],outfits=[],cats=[],wishlist=[],ideas=[],capsules=[],packlists=[],templates=[];
+let items=[],outfits=[],cats=[],wishlist=[],ideas=[],packlists=[],templates=[];
 const CURRENCIES=[
   {code:'GBP',sym:'£',name:'British Pound'},{code:'EUR',sym:'€',name:'Euro'},
   {code:'USD',sym:'$',name:'US Dollar'},{code:'DKK',sym:'Kr',name:'Danish Krone'},
@@ -483,7 +484,7 @@ function updateBadges(){
 }
 
 // ── NAV ───────────────────────────────────────────────────────────────────────
-const NAV_TITLES={all:'All clothes',outfits:'Outfits',wishlist:'Wishlist',ideas:'Outfit ideas',inspo:'Outfit inspo',stats:'Insights',calendar:'Wear calendar',capsule:'Capsule builder',pack:'Pack list',settings:'Settings'};
+const NAV_TITLES={all:'All clothes',outfits:'Outfits',wishlist:'Wishlist',ideas:'Outfit ideas',inspo:'Outfit inspo',stats:'Insights',calendar:'Wear calendar',pack:'Pack list',settings:'Settings'};
 function nav(v){
   view=v;
   document.querySelectorAll('.nb,.bb').forEach(b=>b.classList.remove('active'));
@@ -500,7 +501,7 @@ function renderCurrent(){
   else if(view==='ideas')rIdeas();
   else if(view==='inspo')rInspo();
   else if(view==='stats')rStats();
-  else if(view==='calendar')rCal();else if(view==='capsule')rCapsule();else if(view==='pack')rPack();
+  else if(view==='calendar')rCal();else if(view==='pack')rPack();
   else if(view==='settings')rSettings();else if(view==='glossary'){window._gCat='All';rGlossary();}
 }
 function toggleSidebar(){gi('sidebar').classList.toggle('open');gi('sov').classList.toggle('open');}
@@ -515,7 +516,7 @@ function sCt(h){gi('content').innerHTML=h;}
 // ── ALL ITEMS ─────────────────────────────────────────────────────────────────
 function rItems(){
   const sr=gv('isrch').toLowerCase(),cf=gv('fcol'),tf=gv('ftyp'),bf=gv('fbr'),sf=gv('fsea'),of=gv('focc'),catf=gv('fcat'),ftag=gv('ftag')||'',so=gv('fsort')||'name';
-  const allTags=[...new Set(items.flatMap(i=>i.tags||[]))].sort();
+  const allTags=[...new Set(items.flatMap(i=>i.tags||[]))].sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()));
   let list=items.filter(i=>{
     if(sr&&![i.name,i.brand||'',i.subtype||'',...(i.tags||[])].join(' ').toLowerCase().includes(sr))return false;
     if(cf&&i.color!==cf)return false;if(tf&&i.subtype!==tf)return false;if(bf&&i.brand!==bf)return false;
@@ -525,10 +526,10 @@ function rItems(){
   });
   const fn={name:(a,b)=>a.name.localeCompare(b.name),brand:(a,b)=>(a.brand||'').localeCompare(b.brand||''),color:(a,b)=>(a.color||'').localeCompare(b.color||''),season:(a,b)=>(a.season||'').localeCompare(b.season||''),worn:(a,b)=>(b.wornCount||0)-(a.wornCount||0),newest:(a,b)=>b.addedAt-a.addedAt};
   list.sort(fn[so]||fn.name);
-  const cols=[...new Set(items.map(i=>i.color).filter(Boolean))].sort();
-  const brs=[...new Set(items.map(i=>i.brand).filter(Boolean))].sort();
-  const typs=[...new Set(items.map(i=>i.subtype).filter(Boolean))].sort();
-  const occs=[...new Set(items.map(i=>i.occasion).filter(Boolean))].sort();
+  const cols=[...new Set(items.map(i=>i.color).filter(Boolean))].sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()));
+  const brs=[...new Set(items.map(i=>i.brand).filter(Boolean))].sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()));
+  const typs=[...new Set(items.map(i=>i.subtype).filter(Boolean))].sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()));
+  const occs=[...new Set(items.map(i=>i.occasion).filter(Boolean))].sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()));
   sCH(`<div class="ch"><div class="cht">All clothes</div><div class="chs">${list.length} of ${items.length} item${items.length!==1?'s':''}</div></div>`);
   sFB(`<div class="fb">
     <div class="fbs"><input type="text" id="isrch" placeholder="Search..." value="${sr.replace(/"/g,'&quot;')}" oninput="rItems()"></div>
@@ -538,7 +539,7 @@ function rItems(){
     <select class="fsel" id="fbr" onchange="rItems()"><option value="">All brands</option>${brs.map(b=>`<option ${bf===b?'selected':''}>${b}</option>`).join('')}</select>
     <select class="fsel" id="fsea" onchange="rItems()"><option value="">All seasons</option>${['Spring','Summer','Autumn','Winter','All-season'].map(s=>`<option ${sf===s?'selected':''}>${s}</option>`).join('')}</select>
     <select class="fsel" id="focc" onchange="rItems()"><option value="">All styles</option>${occs.map(o=>`<option ${of===o?'selected':''}>${o}</option>`).join('')}</select>
-    <select class="fsel" id="fcat" onchange="rItems()"><option value="">All categories</option>${cats.map(c=>`<option value="${c.id}" ${catf===c.id?'selected':''}>${c.name}</option>`).join('')}</select>
+    <select class="fsel" id="fcat" onchange="rItems()"><option value="">All categories</option>${[...cats].sort((a,b)=>a.name.toLowerCase().localeCompare(b.name.toLowerCase())).map(c=>`<option value="${c.id}" ${catf===c.id?'selected':''}>${c.name}</option>`).join('')}</select>
     <select class="fsel" id="fsort" onchange="rItems()">${[['name','Name A–Z'],['brand','Brand'],['color','Color'],['season','Season'],['worn','Most worn'],['newest','Newest']].map(([v,l])=>`<option value="${v}" ${so===v?'selected':''}>${l}</option>`).join('')}</select>
     <div class="vt"><button class="vb ${gmode==='grid'?'active':''}" onclick="setGM('grid')">⊞</button><button class="vb ${gmode==='closet'?'active':''}" onclick="setGM('closet')">🚪</button><button class="vb ${gmode==='colour'?'active':''}" onclick="setGM('colour')">🌈</button></div>
     <button class="btn sm pr" onclick="openAddItem()">+ Add</button>
@@ -583,6 +584,10 @@ function openDetail(id){
       ${photos.length?`<div style="display:grid;grid-template-columns:${photos.length>1?'1fr 1fr':'1fr'};gap:6px;margin-bottom:13px">${photos.map(p=>`<img src="${p}" style="width:100%;border-radius:10px;display:block;${photos.length>1?'height:140px;object-fit:cover':''}">`).join('')}</div>`:''}
       <div style="height:80px;border-radius:10px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:32px;border:1px solid rgba(0,0,0,.07);margin-bottom:13px">${cat.icon||'👕'}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 16px;margin-bottom:12px">${[['Category',cat.name],['Type',item.subtype||'—'],['Brand',item.brand||'—'],['Color',item.color||'—'],['Size',item.size||'—'],['Fit',item.fit||'—'],['Season',item.season||'—'],['Style',item.occasion||'—'],['Material',item.material||'—'],['Condition',item.condition||'—'],['Price paid',item.price||'—'],['Store',item.store||'—'],['Purchased',item.purchaseDate||'—'],['Care',item.care||'—'],['Worn in outfits',wornIn],['Total wears',item.wornCount||0]].map(([l,v])=>`<div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">${l}</div><div style="font-size:13px;font-weight:500">${v}</div></div>`).join('')}</div>
+      ${item.notes?`<div style="padding:10px 12px;background:var(--bg2);border-radius:var(--r);margin-bottom:9px">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">📝 Notes</div>
+        <div style="font-size:13px;color:var(--text2);line-height:1.5">${item.notes}</div>
+      </div>`:''}
       ${(item.tags||[]).length?`<div class="tgs" style="margin-bottom:9px">${item.tags.map(t=>`<span class="tg">${t}</span>`).join('')}</div>`:''}
       ${item.notes?`<p style="font-size:13px;color:var(--text2);line-height:1.65">${item.notes}</p>`:''}
     </div>
@@ -629,6 +634,7 @@ function openAddItem(id=null){
         <div class="fr"><label>Store / URL</label><input class="inp" id="f-store" placeholder="ASOS, Zara.com..." value="${item?.store||''}"></div>
       </div>
       <div class="fr"><label>Care instructions</label><input class="inp" id="f-care" placeholder="30° machine wash" value="${item?.care||''}"></div>
+      <div class="fr"><label>Notes <span style="font-weight:400;color:var(--text3)">(sizing, where bought, alterations...)</span></label><textarea class="txa" id="f-notes" placeholder="e.g. Runs small, size up. Bought from ASOS sale.">${item?.notes||''}</textarea></div>
       <div class="fr"><label>Color</label><div class="cr" id="cpick" style="align-items:flex-start"></div></div>
       <div class="fr"><label>Tags</label>
         <div style="display:flex;flex-direction:column;gap:6px">
@@ -779,7 +785,7 @@ function buildOPick(){
     if(tf)typeEl.value=tf;
   }
   if(tagEl&&tagEl.options.length<=1){
-    const allTags=[...new Set(items.flatMap(i=>i.tags||[]))].sort();
+    const allTags=[...new Set(items.flatMap(i=>i.tags||[]))].sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()));
     allTags.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;tagEl.appendChild(o);});
     if(tg)tagEl.value=tg;
   }
@@ -908,7 +914,7 @@ function buildIdeaPicker(){
     if(tf)typeEl.value=tf;
   }
   if(tagEl&&tagEl.options.length<=1){
-    const allTags=[...new Set(items.flatMap(i=>i.tags||[]))].sort();
+    const allTags=[...new Set(items.flatMap(i=>i.tags||[]))].sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase()));
     allTags.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;tagEl.appendChild(o);});
     if(tg)tagEl.value=tg;
   }
@@ -2420,30 +2426,114 @@ function viewPackList(id){
     groups[role].push(i);
   });
 
-  const html=`<div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-      <button class="btn sm" onclick="rPack()">← Back</button>
-      <div style="font-family:'DM Serif Display',serif;font-size:18px">${pack.name}</div>
-    </div>
-    <div style="background:var(--bg2);border-radius:var(--r);padding:12px 14px;margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-      <div style="text-align:center;flex:1"><div style="font-size:20px;font-weight:700">${pack.totalPieces}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Pieces</div></div>
-      <div style="width:1px;height:28px;background:var(--border2)"></div>
-      <div style="text-align:center;flex:1"><div style="font-size:20px;font-weight:700">${pack.days}d</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">${pack.type}</div></div>
-      <div style="width:1px;height:28px;background:var(--border2)"></div>
-      <div style="text-align:center;flex:1"><div style="font-size:20px;font-weight:700">${pack.weather}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Weather</div></div>
-    </div>
-    ${Object.entries(groups).map(([role,roleItems])=>`
-      <div style="margin-bottom:16px">
-        <div style="font-size:12px;font-weight:700;margin-bottom:8px">${role} (${roleItems.length})</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">
-          ${roleItems.map(i=>{const cat=cats.find(c=>c.id===i.category);const fp=(i.photos||[])[0]||null;return`<div class="card" onclick="openDetail('${i.id}')" style="padding:0;overflow:hidden;cursor:pointer">${fp?`<img src="${fp}" style="width:100%;height:90px;object-fit:cover">`:`<div style="width:100%;height:90px;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:28px">${cat?.icon||'👕'}</div>`}<div style="padding:6px 8px"><div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.name}</div><div style="font-size:10px;color:var(--text2)">${i.subtype||''}</div></div></div>`;}).join('')}
+  function renderPackView(){
+    const currentPack=packlists.find(p=>p.id===id);
+    if(!currentPack)return;
+    const currentItems=currentPack.itemIds.map(id=>items.find(i=>i.id===id)).filter(Boolean);
+    const currentGroups={};
+    currentItems.forEach(i=>{
+      const role=TOP_TYPES.includes(i.subtype||'')?'👕 Tops':BOT_TYPES.includes(i.subtype||'')?'👖 Bottoms':DRS_TYPES.includes(i.subtype||'')?'👗 Dresses':OUT_TYPES.includes(i.subtype||'')?'🧥 Outerwear':SHO_TYPES.includes(i.subtype||'')?'👟 Footwear':ACC_TYPES.includes(i.subtype||'')?'💎 Accessories':'📦 Other';
+      if(!currentGroups[role])currentGroups[role]=[];
+      currentGroups[role].push(i);
+    });
+
+    const html=`<div style="padding:14px 16px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <button class="btn sm" onclick="rPack()">← Back</button>
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;flex:1">${currentPack.name}</div>
+        <button class="btn sm pr" onclick="openPackItemPicker('${id}')">+ Add</button>
+      </div>
+      <div style="background:var(--bg2);border-radius:var(--r);padding:12px 14px;margin-bottom:14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div style="text-align:center;flex:1"><div style="font-size:20px;font-weight:700">${currentItems.length}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Pieces</div></div>
+        <div style="width:1px;height:28px;background:var(--border2)"></div>
+        <div style="text-align:center;flex:1"><div style="font-size:20px;font-weight:700">${currentPack.days}d</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">${currentPack.type}</div></div>
+        <div style="width:1px;height:28px;background:var(--border2)"></div>
+        <div style="text-align:center;flex:1"><div style="font-size:20px;font-weight:700">${currentPack.weather}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Weather</div></div>
+      </div>
+      ${Object.entries(currentGroups).map(([role,roleItems])=>`
+        <div style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-size:12px;font-weight:700">${role} (${roleItems.length})</div>
+            <button class="btn sm dn" onclick="removePackCategory('${id}','${role}',window._renderPackView)">Remove all</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px">
+            ${roleItems.map(i=>{const cat=cats.find(c=>c.id===i.category);const fp=(i.photos||[])[0]||null;return`<div style="position:relative">
+              <div class="card" onclick="openDetail('${i.id}')" style="padding:0;overflow:hidden;cursor:pointer">
+                ${fp?`<img src="${fp}" style="width:100%;height:90px;object-fit:cover">`:`<div style="width:100%;height:90px;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:26px">${cat?.icon||'👕'}</div>`}
+                <div style="padding:5px 7px">
+                  <div style="font-size:10px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.name}</div>
+                  <div style="font-size:9px;color:var(--text2)">${i.subtype||''}</div>
+                </div>
+              </div>
+              <button onclick="removePackItem('${id}','${i.id}',window._renderPackView)" style="position:absolute;top:4px;right:4px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;border:none;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;z-index:1">×</button>
+            </div>`;}).join('')}
+          </div>
+        </div>
+      `).join('')}
+    </div>`;
+    sCt(html);
+  }
+
+  window._renderPackView=renderPackView;
+  renderPackView();
+}
+
+function openPackItemPicker(packId){
+  const pack=packlists.find(p=>p.id===packId);
+  if(!pack)return;
+
+  let modal=gi('pack-picker-modal');
+  if(!modal){modal=document.createElement('div');modal.id='pack-picker-modal';modal.className='ov';document.body.appendChild(modal);}
+
+  function renderPicker(){
+    const q=(gi('pack-item-search')?.value||'').toLowerCase();
+    const filtered=items.filter(i=>!q||(i.name||'').toLowerCase().includes(q)||(i.subtype||'').toLowerCase().includes(q));
+    modal.innerHTML=`<div class="modal" style="max-width:480px">
+      <div class="mh">
+        <h2 style="font-family:'DM Serif Display',serif;font-size:16px">Add items to list</h2>
+        <button class="btn gh sm" onclick="gi('pack-picker-modal').style.display='none'">✕</button>
+      </div>
+      <div class="mb" style="max-height:70vh;overflow-y:auto">
+        <input class="inp" id="pack-item-search" placeholder="Search items..." oninput="renderPackPickerItems('${packId}')" style="margin-bottom:10px">
+        <div id="pack-picker-list" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          ${filtered.map(i=>{
+            const fp=(i.photos||[])[0];
+            const cat=cats.find(c=>c.id===i.category);
+            const already=pack.itemIds.includes(i.id);
+            const onclick=already?'':("addItemToPackList('"+packId+"','"+i.id+"')");
+            return`<div onclick="${onclick}" style="cursor:${already?'default':'pointer'};border-radius:10px;border:2px solid ${already?'var(--accent)':'var(--border)'};overflow:hidden;opacity:${already?'0.5':'1'}">
+              ${fp?`<img src="${fp}" style="width:100%;aspect-ratio:1;object-fit:cover">`:`<div style="width:100%;aspect-ratio:1;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:26px">${cat?.icon||'👕'}</div>`}
+              <div style="padding:5px 7px">
+                <div style="font-size:10px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.name}</div>
+                <div style="font-size:9px;color:var(--text3)">${i.subtype||''}</div>
+                ${already?`<div style="font-size:9px;color:var(--accent);font-weight:600">Added ✓</div>`:''}
+              </div>
+            </div>`;
+          }).join('')}
+          ${!filtered.length?`<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);font-size:13px">No items found</div>`:''}
         </div>
       </div>
-    `).join('')}
-  </div>`;
+    </div>`;
+    modal.style.display='flex';
+  }
+  window._renderPackPicker=renderPicker;
+  renderPicker();
+}
 
-  // Show in main content area
-  sCt(`<div style="padding:14px 16px">${html}</div>`);
+function renderPackPickerItems(packId){
+  if(window._renderPackPicker)window._renderPackPicker();
+}
+
+async function addItemToPackList(packId, itemId){
+  const pack=packlists.find(p=>p.id===packId);
+  if(!pack)return;
+  if(pack.itemIds.includes(itemId)){showToast('Already in list');return;}
+  pack.itemIds.push(itemId);
+  pack.totalPieces=pack.itemIds.length;
+  await fbSave('packlists',pack);
+  showToast('Item added ✓');
+  if(window._renderPackPicker)window._renderPackPicker();
+  if(window._renderPackView)window._renderPackView();
 }
 
 async function deletePackList(id){
@@ -2454,164 +2544,35 @@ async function deletePackList(id){
   rPack();
 }
 
-// ── CAPSULE WARDROBE BUILDER ──────────────────────────────────────────────────
-function rCapsule(){
-  sCH(`<div class="ch"><div class="cht">✨ Capsule builder</div><div class="chs">A curated set of pieces that work together</div></div>`);
-  sFB('');
-
-  const seasons=['All-season','Spring','Summer','Autumn','Winter'];
-  const styles=['Casual','Smart casual','Work','Evening','Weekend','Travel'];
-  const sel_season=window._capSeason||'All-season';
-  const sel_style=window._capStyle||'Casual';
-  const sel_size=window._capSize||10;
-
-  sCt(`<div style="padding:14px 16px">
-    <!-- Preferences -->
-    <div style="background:var(--bg2);border-radius:var(--rl);padding:16px;margin-bottom:16px">
-      <div style="font-size:13px;font-weight:700;margin-bottom:12px">Build your capsule</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-        <div>
-          <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Season</label>
-          <select class="fsel" id="cap-season" onchange="window._capSeason=this.value;rCapsule()" style="width:100%;height:34px;font-size:13px">
-            ${seasons.map(s=>`<option ${sel_season===s?'selected':''}>${s}</option>`).join('')}
-          </select>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Style</label>
-          <select class="fsel" id="cap-style" onchange="window._capStyle=this.value;rCapsule()" style="width:100%;height:34px;font-size:13px">
-            ${styles.map(s=>`<option ${sel_style===s?'selected':''}>${s}</option>`).join('')}
-          </select>
-        </div>
-      </div>
-      <div style="margin-bottom:12px">
-        <label style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px">Capsule size: <span style="color:var(--text)">${sel_size} pieces</span></label>
-        <input type="range" min="5" max="20" value="${sel_size}" oninput="window._capSize=+this.value;this.previousElementSibling.querySelector('span').textContent=this.value+' pieces'" onchange="rCapsule()" style="width:100%;accent-color:var(--accent)">
-      </div>
-      <button class="btn pr" style="width:100%" onclick="window._capSeed=Date.now();rCapsule()">🔀 Regenerate</button>
-    </div>
-    <div id="capsule-result">${buildCapsule(sel_season,sel_style,sel_size)}</div>
-    ${capsules.length?`<div style="margin-top:20px">
-      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Saved capsules</div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        ${capsules.map(c=>`<div class="card" style="display:flex;align-items:center;gap:12px;padding:12px 14px">
-          <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:600">${c.name}</div>
-            <div style="font-size:11px;color:var(--text2)">${c.season} · ${c.style} · ${c.itemIds?.length||0} pieces</div>
-            <div style="font-size:11px;color:var(--text3)">${new Date(c.savedAt).toLocaleDateString('default',{day:'numeric',month:'short',year:'numeric'})}</div>
-          </div>
-          <div style="display:flex;gap:6px;flex-shrink:0">
-            <button class="btn sm" onclick="loadCapsule('${c.id}')">View</button>
-            <button class="btn sm dn" onclick="deleteCapsule('${c.id}')">✕</button>
-          </div>
-        </div>`).join('')}
-      </div>
-    </div>`:''}
-  </div>`);
+async function removePackItem(packId, itemId, callback){
+  const pack=packlists.find(p=>p.id===packId);
+  if(!pack)return;
+  pack.itemIds=pack.itemIds.filter(id=>id!==itemId);
+  pack.totalPieces=pack.itemIds.length;
+  await fbSave('packlists',pack);
+  showToast('Item removed ✓');
+  if(callback)callback();
 }
 
-function buildCapsule(season, style, size){
-  if(!items.length)return`<div class="empty"><div class="ei">👗</div><p>Add items to your wardrobe first.</p></div>`;
-
-  // Filter items by season
-  const pool=items.filter(i=>{
-    if(season!=='All-season'&&i.season&&i.season!==season&&i.season!=='All-season')return false;
-    return true;
-  });
-
-  if(pool.length<3)return`<div class="empty"><div class="ei">🔍</div><p>Not enough items for this season. Add more!</p></div>`;
-
-  // Score items by style match
-  const styleKeywords={
-    'Casual':['casual','everyday','relaxed'],
-    'Smart casual':['smart','smart casual','work'],
-    'Work':['formal','work','business','smart'],
-    'Evening':['evening','formal','party'],
-    'Weekend':['casual','weekend','relaxed'],
-    'Travel':['casual','all-season','versatile'],
+async function removePackCategory(packId, role, callback){
+  const pack=packlists.find(p=>p.id===packId);
+  if(!pack)return;
+  // Map role label back to item types
+  const roleTypeMap={
+    '👕 Tops':TOP_TYPES,'👖 Bottoms':BOT_TYPES,'👗 Dresses':DRS_TYPES,
+    '🧥 Outerwear':OUT_TYPES,'👟 Footwear':SHO_TYPES,'💎 Accessories':ACC_TYPES,
   };
-  const keywords=styleKeywords[style]||[];
-
-  function scoreItem(item){
-    let s=item.wornCount||0;
-    if(keywords.some(k=>(item.occasion||'').toLowerCase().includes(k)))s+=3;
-    if(item.condition==='Excellent'||item.condition==='Good')s+=1;
-    return s+(Math.random()*2*(window._capSeed||1)%3);
-  }
-
-  // Build balanced capsule by category
-  const tops=pool.filter(i=>TOP_TYPES.includes(i.subtype||'')).sort((a,b)=>scoreItem(b)-scoreItem(a));
-  const bots=pool.filter(i=>BOT_TYPES.includes(i.subtype||'')).sort((a,b)=>scoreItem(b)-scoreItem(a));
-  const outs=pool.filter(i=>OUT_TYPES.includes(i.subtype||'')).sort((a,b)=>scoreItem(b)-scoreItem(a));
-  const drss=pool.filter(i=>DRS_TYPES.includes(i.subtype||'')).sort((a,b)=>scoreItem(b)-scoreItem(a));
-  const shoe=pool.filter(i=>SHO_TYPES.includes(i.subtype||'')).sort((a,b)=>scoreItem(b)-scoreItem(a));
-  const accs=pool.filter(i=>ACC_TYPES.includes(i.subtype||'')).sort((a,b)=>scoreItem(b)-scoreItem(a));
-
-  // Allocate slots proportionally
-  const capsule=[];
-  const topN=Math.min(Math.ceil(size*0.30),tops.length);
-  const botN=Math.min(Math.ceil(size*0.25),bots.length);
-  const outN=Math.min(Math.ceil(size*0.15),outs.length);
-  const drsN=Math.min(Math.ceil(size*0.15),drss.length);
-  const shoN=Math.min(Math.ceil(size*0.10),shoe.length);
-  const accN=Math.min(size-topN-botN-outN-drsN-shoN,accs.length);
-
-  tops.slice(0,topN).forEach(i=>capsule.push({...i,_role:'Top'}));
-  bots.slice(0,botN).forEach(i=>capsule.push({...i,_role:'Bottom'}));
-  outs.slice(0,outN).forEach(i=>capsule.push({...i,_role:'Outerwear'}));
-  drss.slice(0,drsN).forEach(i=>capsule.push({...i,_role:'Dress / One-piece'}));
-  shoe.slice(0,shoN).forEach(i=>capsule.push({...i,_role:'Footwear'}));
-  accs.slice(0,Math.max(0,accN)).forEach(i=>capsule.push({...i,_role:'Accessory'}));
-
-  if(!capsule.length)return`<div class="empty"><div class="ei">🔍</div><p>No items match this season and style.</p></div>`;
-
-  // Count outfit combinations possible
-  const tCount=capsule.filter(i=>TOP_TYPES.includes(i.subtype||'')).length;
-  const bCount=capsule.filter(i=>BOT_TYPES.includes(i.subtype||'')).length;
-  const dCount=capsule.filter(i=>DRS_TYPES.includes(i.subtype||'')).length;
-  const combos=(tCount*bCount)+dCount;
-
-  // Group by role for display
-  const groups={};
-  capsule.forEach(i=>{if(!groups[i._role])groups[i._role]=[];groups[i._role].push(i);});
-
-  const roleEmojis={'Top':'👕','Bottom':'👖','Outerwear':'🧥','Dress / One-piece':'👗','Footwear':'👟','Accessory':'💎'};
-
-  return`<div>
-    <div style="background:var(--bg2);border-radius:var(--r);padding:12px 14px;margin-bottom:14px;display:flex;gap:16px;align-items:center">
-      <div style="text-align:center;flex:1"><div style="font-size:22px;font-weight:700">${capsule.length}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Pieces</div></div>
-      <div style="width:1px;height:32px;background:var(--border2)"></div>
-      <div style="text-align:center;flex:1"><div style="font-size:22px;font-weight:700">${combos}+</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Outfit combos</div></div>
-      <div style="width:1px;height:32px;background:var(--border2)"></div>
-      <div style="text-align:center;flex:1"><div style="font-size:22px;font-weight:700">${season==='All-season'?'All':season.slice(0,3)}</div><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Season</div></div>
-    </div>
-    ${Object.entries(groups).map(([role,roleItems])=>`
-      <div style="margin-bottom:16px">
-        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">${roleEmojis[role]||'📦'} ${role} (${roleItems.length})</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px">
-          ${roleItems.map(i=>{
-            const cat=cats.find(c=>c.id===i.category);
-            const photos=i.photos||[];
-            const fp=photos[0]||null;
-            return`<div class="card" onclick="openDetail('${i.id}')" style="padding:0;overflow:hidden;cursor:pointer">
-              ${fp?`<img src="${fp}" style="width:100%;height:110px;object-fit:cover">`:`<div style="width:100%;height:110px;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:32px">${cat?.icon||'👕'}</div>`}
-              <div style="padding:8px">
-                <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.name}</div>
-                <div style="font-size:10px;color:var(--text2)">${i.subtype||i.category||''}</div>
-              </div>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>
-    `).join('')}
-    <div style="margin-top:8px;padding:12px 14px;background:var(--bg2);border-radius:var(--r);font-size:12px;color:var(--text2);line-height:1.6">
-      💡 <strong>Tip:</strong> Every top pairs with every bottom — that's ${tCount}×${bCount}=${tCount*bCount} combinations, plus ${dCount} dress${dCount!==1?'es':''} you can wear solo.
-    </div>
-    <button class="btn pr" onclick="saveCapsule()" style="width:100%;margin-top:12px">💾 Save this capsule</button>
-  </div>`;
+  const types=roleTypeMap[role]||[];
+  pack.itemIds=pack.itemIds.filter(id=>{
+    const item=items.find(i=>i.id===id);
+    return!item||!types.includes(item.subtype||'');
+  });
+  pack.totalPieces=pack.itemIds.length;
+  await fbSave('packlists',pack);
+  showToast(`${role} removed ✓`);
+  if(callback)callback();
 }
 
-// ── TAG SYSTEM ────────────────────────────────────────────────────────────────
-let _currentTags=[];
 
 function initTagPicker(existingTags=[]){
   _currentTags=[...existingTags];
