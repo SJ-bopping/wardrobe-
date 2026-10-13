@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 function startListeners(){
   _uns.forEach(u=>u());_uns=[];
-  let loaded={items:false,outfits:false,wishlist:false,ideas:false,cats:false,packlists:false,templates:false};
+  let loaded={items:false,outfits:false,wishlist:false,ideas:false,cats:false,packlists:false};
   function chk(){if(Object.values(loaded).every(Boolean)){window._dataReady=true;[100,400,800].forEach(ms=>setTimeout(()=>{if(typeof renderCurrent==='function'){updateBadges();renderCurrent();}},ms));}}
   const sub=(col,fn,key)=>db.collection('users').doc(_uid).collection(col).onSnapshot(snap=>{fn(snap.docs.map(d=>d.data()));if(!loaded[key]){loaded[key]=true;chk();}else if(typeof updateBadges==='function')updateBadges();});
   _uns.push(sub('items',d=>{items=d;},'items'));
@@ -34,7 +34,6 @@ function startListeners(){
   _uns.push(sub('ideas',d=>{ideas=d;},'ideas'));
   _uns.push(sub('cats',d=>{cats=d;if(!cats.length)seedCats();},'cats'));
   _uns.push(sub('packlists',d=>{packlists=d;},'packlists'));
-  _uns.push(sub('templates',d=>{templates=d;},'templates'));
 
 }
 async function seedCats(){const b=db.batch();DEFAULT_CATS.forEach(c=>b.set(db.collection('users').doc(_uid).collection('cats').doc(c.id),c));await b.commit();}
@@ -209,6 +208,8 @@ input[type=file]{border:none;background:none;padding:6px 0;height:auto;font-size
   #content{padding:0 24px 24px;}
   .ch{padding:24px 24px 0;}
   .fb{padding:0 24px 14px;}
+  .sw{height:78px;}
+  .pt{height:220px;}
 }
 @media(max-width:699px){
   .sidebar{display:none;position:fixed;top:0;left:0;height:100dvh;z-index:300;box-shadow:var(--shl);}
@@ -338,7 +339,7 @@ async function uploadPhotos(files){
 }
 
 // ── DATA ──────────────────────────────────────────────────────────────────────
-let items=[],outfits=[],cats=[],wishlist=[],ideas=[],packlists=[],templates=[];
+let items=[],outfits=[],cats=[],wishlist=[],ideas=[],packlists=[];
 const CURRENCIES=[
   {code:'GBP',sym:'£',name:'British Pound'},{code:'EUR',sym:'€',name:'Euro'},
   {code:'USD',sym:'$',name:'US Dollar'},{code:'DKK',sym:'Kr',name:'Danish Krone'},
@@ -352,7 +353,7 @@ function getCurrencySym(){return CURRENCIES.find(c=>c.code===userCurrency)?.sym|
 function saveCurrency(code){userCurrency=code;localStorage.setItem('wrd_currency',code);showToast('Currency updated!');}
 function parsePrice(str){
   if(!str)return 0;
-  const s=String(str).trim().replace(/[^\d.,]/g,'').replace(',','.');
+  const s=String(str).trim().replace(/[^\d.,]/g,'').replace(/,(\d{3})/g,'$1').replace(',','.');
   return parseFloat(s)||0;
 }
 function fmtPrice(priceStr){
@@ -578,18 +579,40 @@ function openDetail(id){
   const photos=item.photos||[];
   let modal=gi('detail-modal');
   if(!modal){modal=mkModal('detail-modal');}
+  const price=parsePrice(item.price||'');
+  const wears=item.wornCount||0;
+  const cpw=price&&wears?Math.round(price/wears):null;
+  const sym=getCurrencySym();
+  const fmtCpw=n=>(['Kr','kr','Fr'].includes(sym)?n.toLocaleString()+' '+sym:sym+n.toLocaleString());
+  // Photo gallery state
+  window._detailPhotoIdx=0;
+  const totalPhotos=photos.length;
+  function galleryHtml(idx){
+    if(!totalPhotos)return`<div style="height:200px;border-radius:12px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:48px;margin-bottom:13px;border:1px solid rgba(0,0,0,.07)">${cat.icon||'👕'}</div>`;
+    return`<div style="position:relative;margin-bottom:13px">
+      <img src="${photos[idx]}" style="width:100%;border-radius:12px;display:block;max-height:320px;object-fit:cover">
+      ${totalPhotos>1?`<div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:5px">
+        ${photos.map((_,i)=>`<div style="width:6px;height:6px;border-radius:50%;background:${i===idx?'#fff':'rgba(255,255,255,.5)'}"></div>`).join('')}
+      </div>
+      <button onclick="window._detailPhotoIdx=Math.max(0,window._detailPhotoIdx-1);gi('det-gallery').innerHTML=galleryHtmlFn(window._detailPhotoIdx)" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.45);color:#fff;border:none;border-radius:50%;width:30px;height:30px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">‹</button>
+      <button onclick="window._detailPhotoIdx=Math.min(${totalPhotos-1},window._detailPhotoIdx+1);gi('det-gallery').innerHTML=galleryHtmlFn(window._detailPhotoIdx)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.45);color:#fff;border:none;border-radius:50%;width:30px;height:30px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">›</button>`:''}
+    </div>`;
+  }
+  window.galleryHtmlFn=galleryHtml;
   modal.innerHTML=`<div class="modal">
     <div class="mh"><h2 style="font-family:'DM Serif Display',serif;font-size:18px">${item.name}</h2><button class="btn gh sm" onclick="cm('detail-modal')">✕</button></div>
     <div class="mb">
-      ${photos.length?`<div style="display:grid;grid-template-columns:${photos.length>1?'1fr 1fr':'1fr'};gap:6px;margin-bottom:13px">${photos.map(p=>`<img src="${p}" style="width:100%;border-radius:10px;display:block;${photos.length>1?'height:140px;object-fit:cover':''}">`).join('')}</div>`:''}
-      <div style="height:80px;border-radius:10px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:32px;border:1px solid rgba(0,0,0,.07);margin-bottom:13px">${cat.icon||'👕'}</div>
+      <div id="det-gallery">${galleryHtml(0)}</div>
+      ${cpw?`<div style="background:var(--bg2);border-radius:var(--r);padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Cost per wear</div>
+        <div style="font-size:18px;font-weight:700">${fmtCpw(cpw)}</div>
+      </div>`:''}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 16px;margin-bottom:12px">${[['Category',cat.name],['Type',item.subtype||'—'],['Brand',item.brand||'—'],['Color',item.color||'—'],['Size',item.size||'—'],['Fit',item.fit||'—'],['Season',item.season||'—'],['Style',item.occasion||'—'],['Material',item.material||'—'],['Condition',item.condition||'—'],['Price paid',item.price||'—'],['Store',item.store||'—'],['Purchased',item.purchaseDate||'—'],['Care',item.care||'—'],['Worn in outfits',wornIn],['Total wears',item.wornCount||0]].map(([l,v])=>`<div><div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">${l}</div><div style="font-size:13px;font-weight:500">${v}</div></div>`).join('')}</div>
       ${item.notes?`<div style="padding:10px 12px;background:var(--bg2);border-radius:var(--r);margin-bottom:9px">
         <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">📝 Notes</div>
         <div style="font-size:13px;color:var(--text2);line-height:1.5">${item.notes}</div>
       </div>`:''}
       ${(item.tags||[]).length?`<div class="tgs" style="margin-bottom:9px">${item.tags.map(t=>`<span class="tg">${t}</span>`).join('')}</div>`:''}
-      ${item.notes?`<p style="font-size:13px;color:var(--text2);line-height:1.65">${item.notes}</p>`:''}
     </div>
     <div class="mf"><button class="btn sm dn" onclick="delItem()">Delete</button><button class="btn sm" onclick="cm('detail-modal');openAddItem('${id}')">Edit</button><button class="btn sm pr" onclick="cm('detail-modal')">Close</button></div>
   </div>`;
@@ -726,9 +749,9 @@ function rOutfits(){
   if(!list.length){sCt(`<div class="empty"><div class="ei">📸</div><p>Log outfit photos here!</p></div>`);return;}
   sCt(`<div class="glg">${list.map(o=>{
     const tg=(o.items||[]).map(id=>items.find(i=>i.id===id)).filter(Boolean);
-    const fps=tg.slice(0,4).map(t=>(t.photos||[])[0]).filter(Boolean);
     const fp=(o.photos||[])[0]||null;
-    return`<div class="pc" onclick="openEditOutfit('${o.id}')"><div class="pt">${fp?`<img src="${fp}" alt="">`:'📸'}${(o.photos||[]).length>1?`<span style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.5);color:#fff;font-size:10px;padding:2px 7px;border-radius:99px">📷 ${o.photos.length}</span>`:''}</div><div class="pb"><div class="cn">${o.name}</div>${o.occasion?`<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${o.occasion}</div>`:''}<div style="font-size:11px;color:var(--text2);margin-bottom:5px">${tg.length?tg.map(t=>t.name).join(', '):'No items tagged'}</div></div></div>`;
+    const itemThumbs=tg.slice(0,4).map(t=>{const ip=(t.photos||[])[0];const h=hx(t.color);const fg=isLight(h)?'#1a1705':'#faf9f6';const cat=cats.find(c=>c.id===t.category)||{};return ip?`<div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex:0 0 36px;border:1px solid var(--border)"><img src="${ip}" style="width:100%;height:100%;object-fit:cover"></div>`:`<div style="width:36px;height:36px;border-radius:6px;overflow:hidden;flex:0 0 36px;background:${h};display:flex;align-items:center;justify-content:center;font-size:16px">${cat.icon||'👕'}</div>`;});
+    return`<div class="pc" onclick="openEditOutfit('${o.id}')"><div class="pt">${fp?`<img src="${fp}" alt="">`:'📸'}${(o.photos||[]).length>1?`<span style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,.5);color:#fff;font-size:10px;padding:2px 7px;border-radius:99px">📷 ${o.photos.length}</span>`:''}</div><div class="pb"><div class="cn">${o.name}</div>${o.occasion?`<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${o.occasion}</div>`:''}<div style="font-size:11px;color:var(--text2);margin-bottom:${tg.length?'6px':'5px'}">${tg.length?tg.map(t=>t.name).join(', '):'No items tagged'}</div>${tg.length?`<div style="display:flex;gap:4px;flex-wrap:nowrap;overflow:hidden">${itemThumbs.join('')}${tg.length>4?`<div style="width:36px;height:36px;border-radius:6px;flex:0 0 36px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--text3);font-weight:600">+${tg.length-4}</div>`:''}</div>`:''}</div></div>`;
   }).join('')}</div>`);
 }
 function openAddOutfit(){eOutfitId=null;selOut=new Set();poPhotos=[];openOutfitModal();}
@@ -832,20 +855,16 @@ function wish2ward(id){const w=wishlist.find(x=>x.id===id);if(!w)return;wishlist
 function rIdeas(tab){
   if(!window._ideasTab)window._ideasTab='outfits';
   if(tab)window._ideasTab=tab;
-  const isTemplates=window._ideasTab==='templates';
-  sCH(`<div class="ch"><div class="cht">Outfit ideas</div><div class="chs">${isTemplates?templates.length+' template'+(templates.length!==1?'s':''):ideas.length+' idea'+(ideas.length!==1?'s':'')}</div></div>`);
   const isMix=window._ideasTab==='mix';
+  sCH(`<div class="ch"><div class="cht">Outfit ideas</div><div class="chs">${ideas.length+' idea'+(ideas.length!==1?'s':'')}</div></div>`);
   sFB(`<div class="fb">
     <div style="display:flex;gap:0;border-bottom:2px solid var(--border2);width:100%">
-      <button onclick="window._ideasTab='outfits';rIdeas()" style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:${!isTemplates&&!isMix?'var(--accent)':'var(--text3)'};border-bottom:${!isTemplates&&!isMix?'2px solid var(--accent)':'2px solid transparent'};margin-bottom:-2px;font-family:'DM Sans',sans-serif">👚 Outfits</button>
+      <button onclick="window._ideasTab='outfits';rIdeas()" style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:${!isMix?'var(--accent)':'var(--text3)'};border-bottom:${!isMix?'2px solid var(--accent)':'2px solid transparent'};margin-bottom:-2px;font-family:'DM Sans',sans-serif">👚 Outfits</button>
       <button onclick="window._ideasTab='mix';rIdeas()" style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:${isMix?'var(--accent)':'var(--text3)'};border-bottom:${isMix?'2px solid var(--accent)':'2px solid transparent'};margin-bottom:-2px;font-family:'DM Sans',sans-serif">🎨 Mix & match</button>
-      <button onclick="window._ideasTab='templates';rIdeas()" style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:${isTemplates?'var(--accent)':'var(--text3)'};border-bottom:${isTemplates?'2px solid var(--accent)':'2px solid transparent'};margin-bottom:-2px;font-family:'DM Sans',sans-serif">📋 Templates</button>
-      ${!isTemplates&&!isMix?`<div class="fbs" style="margin-left:auto"><input type="text" id="dsrch" placeholder="Search ideas..." oninput="rIdeas()"></div>`:''}
-      ${!isTemplates&&!isMix?`<button class="btn sm pr" onclick="openAddIdea()" style="margin-left:auto">+ Create</button>`:''}
-      ${isTemplates?`<button class="btn sm pr" onclick="openTemplateBuilder()" style="margin-left:auto">+ New template</button>`:''}
+      ${!isMix?`<div class="fbs" style="margin-left:auto"><input type="text" id="dsrch" placeholder="Search ideas..." oninput="rIdeas()"></div>`:''}
+      ${!isMix?`<button class="btn sm pr" onclick="openAddIdea()" style="margin-left:auto">+ Create</button>`:''}
     </div>
   </div>`);
-  if(isTemplates){rTemplatesList();return;}
   if(isMix){rMixMatch();return;}
   const sr=gv('dsrch').toLowerCase();
   const list=ideas.filter(d=>!sr||d.name.toLowerCase().includes(sr)).sort((a,b)=>b.createdAt-a.createdAt);
@@ -980,82 +999,138 @@ const STYLES=[
    names:['Active energy','Court side','Track to table','Sport luxe','Game day']},
 ];
 
-let inspoTab='shuffle', inspoStyle='my', inspoLoading=false;
 
 function rInspo(){
-  sCH(`<div class="ch"><div class="cht">Outfit inspo</div><div class="chs">Style-matched outfits from your wardrobe</div></div>`);
-  sFB('');
+  if(!window._inspoTab)window._inspoTab='styles';
+  const isShuffle=window._inspoTab==='shuffle';
+  sCH(`<div class="ch"><div class="cht">✨ Outfit inspo</div><div class="chs">${isShuffle?'Random combos from your wardrobe':'Pick a style, see what works in your closet'}</div></div>`);
+  sFB(`<div class="fb">
+    <div style="display:flex;gap:0;border-bottom:2px solid var(--border2);width:100%">
+      <button onclick="window._inspoTab='styles';rInspo()" style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:${!isShuffle?'var(--accent)':'var(--text3)'};border-bottom:${!isShuffle?'2px solid var(--accent)':'2px solid transparent'};margin-bottom:-2px;font-family:'DM Sans',sans-serif">✨ Style picks</button>
+      <button onclick="window._inspoTab='shuffle';rInspo()" style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:${isShuffle?'var(--accent)':'var(--text3)'};border-bottom:${isShuffle?'2px solid var(--accent)':'2px solid transparent'};margin-bottom:-2px;font-family:'DM Sans',sans-serif">🎲 Shuffle</button>
+    </div>
+  </div>`);
+  if(isShuffle){rInspoShuffle();return;}
+  rInspoStyles();
+}
+
+function rInspoStyles(){
   if(!window._inspoStyle)window._inspoStyle=STYLES[0].id;
   const activeStyle=STYLES.find(s=>s.id===window._inspoStyle)||STYLES[0];
 
-  const pills=`<div style="overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;border-bottom:1px solid var(--border)">
-    <div style="display:flex;gap:6px;padding:10px 16px;width:max-content">
-      ${STYLES.map(s=>`<button onclick="window._inspoStyle='${s.id}';rInspo()" style="padding:5px 12px;border-radius:99px;border:1px solid var(--border2);background:${window._inspoStyle===s.id?'var(--accent)':'var(--bg)'};color:${window._inspoStyle===s.id?'var(--afg)':'var(--text2)'};cursor:pointer;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;white-space:nowrap;flex-shrink:0">${s.label}</button>`).join('')}
+  // Style selector — horizontal scroll, each style as a pill with palette dots
+  const stylePills=STYLES.map(s=>{
+    const isActive=window._inspoStyle===s.id;
+    const paletteDots=(s.palette||[]).slice(0,4).map(p=>`<div style="width:9px;height:9px;border-radius:50%;background:${hx(p)};border:1px solid rgba(0,0,0,.12);flex-shrink:0"></div>`).join('');
+    return`<button onclick="window._inspoStyle='${s.id}';rInspoStyles()" style="display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:9px 12px;border-radius:12px;border:${isActive?'2px solid var(--accent)':'1px solid var(--border2)'};background:${isActive?'var(--accent)':'var(--bg)'};color:${isActive?'var(--afg)':'var(--text2)'};cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;min-width:110px;transition:all .12s">
+      <div style="font-size:13px;font-weight:600;white-space:nowrap">${s.label}</div>
+      <div style="display:flex;gap:3px">${paletteDots}</div>
+    </button>`;
+  }).join('');
+  const pillsRow=`<div style="overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding:10px 16px;border-bottom:1px solid var(--border)">
+    <div style="display:flex;gap:7px;width:max-content">${stylePills}</div>
+  </div>`;
+
+  // Moodboard: style rule chips + refresh
+  const ruleChips=activeStyle.tips.map(t=>`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:11px;color:var(--text2);line-height:1.4">• ${t}</div>`).join('');
+  const moodboard=`<div style="padding:12px 16px 0">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div>
+        <div style="font-size:15px;font-weight:700">${activeStyle.label}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:1px">${activeStyle.desc}</div>
+      </div>
+      <button class="btn sm" onclick="window._inspoSeed=Date.now();rInspoStyles()" style="border:1px solid var(--border2)">🔀 Refresh</button>
     </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${ruleChips}</div>
   </div>`;
 
   const outfitCards=genStyleOutfits(activeStyle);
-
-  const styleCard=`<div style="padding:12px 16px 0">
-    <div style="background:var(--bg2);border-radius:var(--rl);padding:14px 16px;margin-bottom:12px;display:flex;gap:14px;align-items:flex-start">
-      <div style="flex:1">
-        <div style="font-family:'DM Serif Display',serif;font-size:16px;margin-bottom:3px">${activeStyle.label}</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:10px">${activeStyle.desc}</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">
-          ${activeStyle.tips.map(t=>`<div style="font-size:11px;color:var(--text2);padding:4px 0;width:100%">· ${t}</div>`).join('')}
-        </div>
-      </div>
-    </div>
-    <button class="btn" onclick="window._inspoSeed=Date.now();rInspo()" style="width:100%;margin-bottom:12px;border:1px solid var(--border2)">🔀 Regenerate outfits</button>
-  </div>`;
-
-  sCt(pills+styleCard+`<div style="padding:0 16px 16px">${
+  sCt(pillsRow+moodboard+`<div style="padding:0 16px 24px">${
     outfitCards.length
       ?outfitCards.join('')
       :`<div class="empty"><div class="ei">👗</div><p>Not enough items for this style.<br>Add more pieces to your wardrobe!</p></div>`
   }</div>`);
 }
 
+function rInspoShuffle(){
+  const sea=window._inspoShufSea||'',sty=window._inspoShufSty||'';
+  const filters=`<div style="padding:10px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--border)">
+    <select class="fsel" style="height:34px" onchange="window._inspoShufSea=this.value;rInspoShuffle()"><option value="">Any season</option><option${sea==='Spring'?' selected':''}>Spring</option><option${sea==='Summer'?' selected':''}>Summer</option><option${sea==='Autumn'?' selected':''}>Autumn</option><option${sea==='Winter'?' selected':''}>Winter</option></select>
+    <select class="fsel" style="height:34px" onchange="window._inspoShufSty=this.value;rInspoShuffle()"><option value="">Any occasion</option><option${sty==='Everyday'?' selected':''}>Everyday</option><option${sty==='Work'?' selected':''}>Work</option><option${sty==='Date night'?' selected':''}>Date night</option><option${sty==='Sport'?' selected':''}>Sport</option><option${sty==='Travel'?' selected':''}>Travel</option></select>
+    <button class="btn sm pr" onclick="rInspoShuffle()" style="margin-left:auto">🎲 Reshuffle</button>
+  </div>`;
 
-function switchInspoTab(tab){
-  inspoTab=tab;
-  // Update tab styles
-  const tabs={shuffle:'tab-shuffle',ai:'tab-ai'};
-  Object.entries(tabs).forEach(([key,id])=>{
-    const el=gi(id);if(!el)return;
-    const active=key===tab;
-    el.style.color=active?'var(--accent)':'var(--text3)';
-    el.style.borderBottom=active?'2px solid var(--accent)':'2px solid transparent';
-  });
-  renderInspoTab();
-}
-
-function renderInspoTab(){
-  const el=gi('inspo-tab-content');if(!el)return;
-  if(inspoTab==='shuffle') renderShuffleTab(el);
-  else renderAITab(el);
-}
-
-// ── TAB 1: QUICK SHUFFLE ──────────────────────────────────────────────────────
-function renderShuffleTab(el){
-  el.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
-    <button class="btn sm pr" onclick="genShuffle()">🎲 Shuffle all</button>
-    <select class="fsel" id="sh-sea" onchange="genShuffle()" style="height:34px"><option value="">Any season</option><option>Spring</option><option>Summer</option><option>Autumn</option><option>Winter</option></select>
-    <select class="fsel" id="sh-sty" onchange="genShuffle()" style="height:34px"><option value="">Any style</option><option>Casual</option><option>Smart casual</option><option>Business</option><option>Formal</option><option>Sportswear</option></select>
-  </div>
-  <div id="shuffle-results"></div>`;
-  genShuffle();
-}
-
-function getShufflePool(){
-  const sea=gv('sh-sea'),sty=gv('sh-sty');
   let pool=items.filter(i=>{
     if(sea&&i.season!==sea&&i.season!=='All-season')return false;
     if(sty&&i.occasion!==sty)return false;
     return true;
   });
-  return pool.length>=2?pool:[...items];
+  if(pool.length<2)pool=[...items];
+
+  const existing=[],cards=[];
+  for(let i=0;i<6;i++){const o=buildOutfit(pool,existing);if(o){existing.push(o);cards.push(o);}}
+
+  // Shuffle moods — gives each outfit a name based on colour mood
+  const MOODS=['Effortless','Off duty','Sunday best','Something new','Feeling myself','Going out'];
+
+  const cardsHtml=cards.length
+    ?`<div style="padding:12px 16px 24px;display:flex;flex-direction:column;gap:10px">${cards.map((outfit,i)=>{
+        const idStr=outfit.map(x=>x.id).join('|');
+        const moodName=MOODS[i%MOODS.length];
+
+        // Hero item (prefer photo)
+        const withPhoto=outfit.filter(x=>(x.photos||[]).length>0);
+        const hero=withPhoto[0]||outfit.find(x=>TOP_TYPES.includes(x.subtype||'')||DRS_TYPES.includes(x.subtype||''))||outfit[0];
+        const heroFp=(hero?.photos||[])[0];
+        const heroH=hx(hero?.color);
+        const heroCat=cats.find(c=>c.id===hero?.category)||{};
+        const heroFg=isLight(heroH)?'#1a1705':'#faf9f6';
+        const sideItems=outfit.filter(x=>x.id!==hero?.id);
+        const colorSwatches=outfit.map(x=>`<div title="${x.color||''}" style="width:12px;height:12px;border-radius:50%;background:${hx(x.color)};border:1px solid rgba(0,0,0,.12)"></div>`).join('');
+
+        const sideRow=sideItems.map(item=>{
+          const fp=(item.photos||[])[0];const h=hx(item.color);const fg2=isLight(h)?'#1a1705':'#faf9f6';
+          const cat=cats.find(c=>c.id===item.category)||{};
+          return`<div style="display:flex;flex-direction:column;align-items:center;width:48px;flex-shrink:0">
+            <div style="width:48px;height:48px;border-radius:7px;overflow:hidden;margin-bottom:3px;border:1px solid var(--border);flex-shrink:0">
+              ${fp?`<img src="${fp}" style="width:48px;height:48px;object-fit:cover;display:block">`:`<div style="width:48px;height:48px;background:${h};display:flex;align-items:center;justify-content:center;font-size:16px;color:${fg2}">${cat.icon||'👕'}</div>`}
+            </div>
+            <div style="font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:48px;text-align:center">${item.subtype||''}</div>
+          </div>`;
+        }).join('');
+
+        return`<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
+          <div style="display:flex;gap:0">
+            <div style="width:90px;flex-shrink:0;background:${heroFp?'var(--bg2)':heroH}">
+              ${heroFp?`<img src="${heroFp}" style="width:90px;height:110px;object-fit:cover;display:block">`:`<div style="width:90px;height:110px;display:flex;align-items:center;justify-content:center;font-size:30px;color:${heroFg}">${heroCat.icon||'👕'}</div>`}
+            </div>
+            <div style="flex:1;min-width:0;padding:12px;display:flex;flex-direction:column">
+              <div style="font-family:'DM Serif Display',serif;font-size:14px;margin-bottom:2px">${moodName}</div>
+              <div style="display:flex;gap:3px;margin-bottom:10px;align-items:center">${colorSwatches}</div>
+              <div style="display:flex;gap:5px;flex:1">${sideRow}</div>
+              <div style="margin-top:10px">
+                <button class="btn sm pr" style="width:100%;justify-content:center" onclick="saveShuffleIdea('${idStr}','${moodName}')">+ Save to ideas</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}</div>`
+    :`<div class="empty"><div class="ei">🎨</div><p>Couldn't generate outfits.<br>Add more items to your wardrobe!</p></div>`;
+  sCt(filters+cardsHtml);
 }
+
+function saveShuffleIdea(idStr, defaultName){
+  const name=prompt('Name this outfit idea:',defaultName);
+  if(!name)return;
+  const itemIds=idStr.split('|').filter(Boolean);
+  const idea={id:uid(),name:name.trim(),items:itemIds,createdAt:Date.now(),updatedAt:Date.now(),notes:''};
+  ideas.push(idea);
+  updateBadges();
+  persist('ideas',idea);
+  showToast('Saved to Outfit ideas ✓');
+}
+
+
 
 function buildOutfit(pool,existing=[]){
   const pick=arr=>arr.length?arr[Math.floor(Math.random()*arr.length)]:null;
@@ -1088,88 +1163,62 @@ function buildOutfit(pool,existing=[]){
   return outfit;
 }
 
-function shuffleItemCard(item){
-  const fp=(item.photos||[])[0]||null;
-  const h=hx(item.color),fg=isLight(h)?'#1a1705':'#faf9f6';
-  const cat=cats.find(c=>c.id===item.category)||{};
-  return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-    ${fp?`<img src="${fp}" style="width:44px;height:44px;border-radius:8px;object-fit:cover;flex-shrink:0">`:`<div style="width:44px;height:44px;border-radius:8px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;border:1px solid rgba(0,0,0,.07)">${cat.icon||'👕'}</div>`}
-    <div style="flex:1;min-width:0">
-      <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}</div>
-      <div style="font-size:11px;color:var(--text2)">${[item.brand,item.subtype].filter(Boolean).join(' · ')||'—'}</div>
-    </div>
-  </div>`;
+
+// Colour harmony helpers
+const NEUTRALS=['White','Cream','Beige','Ivory','Off-white','Black','Grey','Charcoal','Sand','Stone','Camel','Tan','Ecru','Natural','Light grey','Dark grey','Slate','Nude','Khaki'];
+function isNeutral(c){return NEUTRALS.some(n=>n.toLowerCase()===c?.toLowerCase());}
+function colorsClash(c1,c2){
+  // Hard clashes — don't pair these
+  const clashes=[['Red','Green'],['Red','Orange'],['Pink','Orange'],['Purple','Yellow'],['Blue','Orange'],['Green','Purple']];
+  for(const [a,b] of clashes){
+    if((c1?.includes(a)&&c2?.includes(b))||(c1?.includes(b)&&c2?.includes(a)))return true;
+  }
+  return false;
+}
+function colorCompatScore(colors){
+  // Score how well a set of colors works together (higher = better)
+  const nonNeutral=colors.filter(c=>!isNeutral(c));
+  if(nonNeutral.length===0)return 3; // all neutrals — great
+  if(nonNeutral.length===1)return 2.5; // one accent — clean
+  if(nonNeutral.length===2){
+    if(colorsClash(nonNeutral[0],nonNeutral[1]))return 0; // hard clash — reject
+    return 1.5;
+  }
+  return 0.5; // 3+ non-neutrals — risky
 }
 
-function genShuffle(){
-  const pool=getShufflePool(),existing=[],cards=[];
-  for(let i=0;i<6;i++){const o=buildOutfit(pool,existing);if(o){existing.push(o);cards.push(o);}}
-  const el=gi('shuffle-results');if(!el)return;
-  if(!cards.length){el.innerHTML=`<div class="empty"><div class="ei">🎨</div><p>Couldn't generate outfits. Add more items!</p></div>`;return;}
-  el.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">${cards.map((outfit,i)=>{
-    const idStr=outfit.map(x=>x.id).join('|');
-    return`<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
-      <div style="padding:14px 14px 0">
-        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">OUTFIT ${i+1}</div>
-        ${outfit.map(shuffleItemCard).join('')}
-      </div>
-      <div style="display:flex;gap:6px;padding:10px 14px">
-        <button class="btn sm pr" style="flex:1;justify-content:center" data-ids="${idStr}" onclick="saveToIdeas(this.dataset.ids)">+ Save to Outfit ideas</button>
-        <button class="btn sm" onclick="reshuffleOne(this)" data-idx="${i}" title="Reshuffle">🔀</button>
-      </div>
-    </div>`;
-  }).join('')}</div>`;
-}
+// Style-specific item exclusions (subtypes that make no sense for this style)
+const STYLE_BLOCKLIST={
+  oldmoney:['Running shorts','Cycling shorts','Leggings','Hoodie','Cap','Beanie','Sneakers','Sports bra','Tank top'],
+  minimal:['Cap','Beanie','Running shorts','Cycling shorts'],
+  romantic:['Running shorts','Cycling shorts','Cap','Beanie','Hoodie'],
+  coastal:['Running shorts','Cycling shorts','Hoodie','Puffer jacket'],
+  downtown:['Running shorts','Cycling shorts','Sports bra'],
+  stargirl:['Running shorts','Cycling shorts','Cap'],
+  sporty:['Heels','Loafers','Flats','Blazer','Trench coat'],
+  streetwear:[],
+  urbancore:['Heels','Sandals','Flats'],
+};
 
-function reshuffleOne(btn){
-  const card=btn.closest('div[style*="background:var(--bg)"]');
-  const pool=getShufflePool();
-  const o=buildOutfit(pool,[]);
-  if(!o){showToast('No more combinations!');return;}
-  const idStr=o.map(x=>x.id).join('|');
-  const tmp=document.createElement('div');
-  const idx=btn.dataset.idx||'';
-  tmp.innerHTML=`<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden">
-    <div style="padding:14px 14px 0">
-      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">OUTFIT ${idx}</div>
-      ${o.map(shuffleItemCard).join('')}
-    </div>
-    <div style="display:flex;gap:6px;padding:10px 14px">
-      <button class="btn sm pr" style="flex:1;justify-content:center" data-ids="${idStr}" onclick="saveToIdeas(this.dataset.ids)">+ Save to Outfit ideas</button>
-      <button class="btn sm" onclick="reshuffleOne(this)" data-idx="${idx}" title="Reshuffle">🔀</button>
-    </div>
-  </div>`;
-  card.replaceWith(tmp.firstElementChild);
-}
+// What each style is missing — for "what to add" suggestions
+const STYLE_MISSING_TIPS={
+  oldmoney:{tops:'a tailored blouse or fine-knit sweater',bots:'slim trousers or a midi skirt',outers:'a wool coat or structured blazer',shoes:'leather loafers or pointed-toe flats',accs:'a structured leather bag or delicate gold jewellery'},
+  minimal:{tops:'a fitted white tee or ribbed top',bots:'straight-leg trousers or a simple midi skirt',shoes:'clean white trainers or simple black flats',accs:'one fine gold chain or small studs'},
+  streetwear:{tops:'a graphic tee or oversized hoodie',bots:'baggy jeans or cargo trousers',shoes:'chunky trainers or high-top sneakers',accs:'a cap or crossbody bag'},
+  coastal:{tops:'a linen shirt or relaxed cotton blouse',bots:'wide-leg linen trousers or a breezy midi skirt',drss:'a flowy sundress',shoes:'leather sandals or espadrilles',accs:'a wicker bag or gold bracelet'},
+  downtown:{tops:'a simple black top or a fitted long-sleeve',bots:'straight-leg jeans or leather-look trousers',outers:'a leather jacket or oversized blazer',shoes:'ankle boots or pointed loafers'},
+  urbancore:{tops:'a technical jacket or utility shirt',bots:'cargo trousers or wide-leg dark jeans',shoes:'chunky technical boots or platform sneakers'},
+  stargirl:{tops:'a shimmery top or sheer blouse',drss:'a floaty midi or maxi dress',shoes:'metallic sandals or silver-toned flats',accs:'layered star or moon jewellery'},
+  romantic:{tops:'a floral blouse or delicate knit',bots:'a flowy midi skirt or high-waisted wide-leg trousers',outers:'a longline cardigan',shoes:'Mary Janes or block-heeled ankle boots'},
+  sporty:{tops:'a fitted sports top or zip-up',bots:'running shorts or athletic leggings',shoes:'clean white trainers or low-profile sneakers'},
+};
 
-// ── TAB 2: STYLE AESTHETICS ───────────────────────────────────────────────────
-function renderAITab(el){
-  const pillsHtml=STYLES.map(s=>`<button onclick="selectStyle('${s.id}')" id="style-pill-${s.id}" style="padding:8px 14px;border-radius:99px;border:1px solid var(--border2);background:${inspoStyle===s.id?'var(--accent)':'var(--bg)'};color:${inspoStyle===s.id?'var(--afg)':'var(--text2)'};cursor:pointer;font-size:13px;white-space:nowrap;transition:all .12s;font-family:'DM Sans',sans-serif">${s.label}</button>`).join('');
-  const curStyle=STYLES.find(s=>s.id===inspoStyle)||STYLES[0];
-  el.innerHTML=`
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">${pillsHtml}</div>
-    <div id="style-desc" style="font-size:13px;color:var(--text2);margin-bottom:16px;padding:10px 14px;background:var(--bg2);border-radius:var(--r)">${curStyle.desc}</div>
-    <button class="btn pr" onclick="genStyleOutfits()" id="ai-gen-btn" style="width:100%;justify-content:center;height:42px;font-size:14px;margin-bottom:20px">✨ Generate outfit suggestions</button>
-    <div id="ai-results"></div>`;
-}
-
-function selectStyle(id){
-  inspoStyle=id;
-  document.querySelectorAll('[id^="style-pill-"]').forEach(el=>{
-    const active=el.id===`style-pill-${id}`;
-    el.style.background=active?'var(--accent)':'var(--bg)';
-    el.style.color=active?'var(--afg)':'var(--text2)';
-  });
-  const desc=gi('style-desc');
-  if(desc)desc.textContent=STYLES.find(s=>s.id===id)?.desc||'';
-  gi('ai-results').innerHTML='';
-}
-
-// Per-item styling advice based on what's in the outfit
 function getOutfitTip(outfit, styleInfo){
+  const sid=styleInfo.id;
   const types=outfit.map(i=>i.subtype||'');
   const colors=outfit.map(i=>i.color||'').filter(Boolean);
   const fits=outfit.map(i=>i.fit||'').filter(Boolean);
+  const brands=outfit.map(i=>i.brand||'').filter(Boolean);
   const hasTop=types.some(t=>TOP_TYPES.includes(t));
   const hasBot=types.some(t=>BOT_TYPES.includes(t));
   const hasOuter=types.some(t=>OUT_TYPES.includes(t));
@@ -1177,191 +1226,294 @@ function getOutfitTip(outfit, styleInfo){
   const hasShoe=types.some(t=>SHO_TYPES.includes(t));
   const hasAcc=types.some(t=>ACC_TYPES.includes(t));
   const uniqueColors=[...new Set(colors)];
-  const isMonochrome=uniqueColors.length===1;
-  const sid=styleInfo.id;
-  const tips=[];
+  const nonNeutralColors=uniqueColors.filter(c=>!isNeutral(c));
+  const allNeutral=nonNeutralColors.length===0;
+  const tip=[];
 
-  // Structure tip — specific to what is in this outfit
-  if(hasTop&&hasBot&&!hasOuter){
-    if(['minimal','oldmoney','preppy','romantic'].includes(sid))tips.push('Tuck your top in fully — a clean tuck elevates this combination instantly');
-    else if(sid==='messyitgirl')tips.push('Half-tuck only — one side in, one side out, nothing too neat');
-    else if(sid==='streetwear'||sid==='urbancore')tips.push('Leave it untucked and let the layers fall naturally');
-    else if(sid==='coquette'||sid==='stargirl')tips.push('Try a loose front tuck to keep the feminine shape without being too structured');
-    else tips.push('A half-tuck adds shape without effort — tuck just the front of the top');
-  }
-  if(hasOuter){
-    if(sid==='downtown'||sid==='messyitgirl')tips.push('Wear the outer layer open — push it slightly off the shoulders for maximum effect');
-    else if(sid==='oldmoney'||sid==='preppy')tips.push('Fasten one or two buttons on the outer layer — structured and intentional');
-    else if(sid==='dark'||sid==='romantic')tips.push('Layer the outer piece so the collar or neck of the item underneath peeks out');
-    else if(sid==='streetwear')tips.push('Keep it fully open or drape it off one shoulder — nothing buttoned up');
-    else tips.push('Open layering feels effortless — button only if the weather calls for it');
-  }
-  if(hasDress&&!hasOuter){
-    if(sid==='coquette'||sid==='stargirl')tips.push('A thin ribbon or delicate belt at the waist adds shape and feels on-brand');
-    else if(sid==='boho')tips.push('A wide woven or leather belt breaks the dress into two proportions beautifully');
-    else if(sid==='minimal')tips.push('Nothing added — let the dress silhouette be the whole statement');
-    else tips.push('Let the dress lead and keep everything else simple');
+  // 1. Colour-specific observation (most specific possible)
+  if(uniqueColors.length===1){
+    const c=uniqueColors[0].toLowerCase();
+    if(allNeutral)tip.push(`Head-to-toe ${c} — vary the textures (matte vs sheen, smooth vs knit) so it reads intentional, not monochrome by accident`);
+    else tip.push(`Head-to-toe ${c} is a full commitment — a single contrasting texture like a satin or leather piece stops it feeling flat`);
+  } else if(nonNeutralColors.length===1){
+    tip.push(`${nonNeutralColors[0]} against neutrals — let that colour be the only pop and keep everything else quiet`);
+  } else if(nonNeutralColors.length>=2){
+    tip.push(`${nonNeutralColors[0]} and ${nonNeutralColors[1]} together — ground them with a neutral shoe or bag so neither colour fights for attention`);
+  } else if(allNeutral&&uniqueColors.length>=2){
+    const c1=uniqueColors[0],c2=uniqueColors[1];
+    if(c1?.toLowerCase()===c2?.toLowerCase()) tip.push(`Tonal ${c1.toLowerCase()} — the variation is all in the texture and fit, which is the point`);
+    else tip.push(`${c1} and ${c2} is a clean neutral pairing — add one metallic or textured accessory to give the look a focal point`);
   }
 
-  // Fit-based tip
+  // 2. Fit balance (only if genuinely interesting contrast or problem)
   const hasOversized=fits.some(f=>['Oversized','Baggy','Loose'].includes(f));
-  const hasFitted=fits.some(f=>['Fitted','Tight','Skin tight'].includes(f));
-  if(hasOversized&&hasFitted)tips.push('The contrast between the fitted and oversized pieces is doing the work here — keep it');
-  else if(hasOversized&&outfit.length>=2)tips.push('Both pieces are relaxed — define your waist with a belt or a simple tuck');
-
-  // Colour tip
-  if(isMonochrome&&uniqueColors[0]){
-    tips.push(`Head-to-toe ${uniqueColors[0].toLowerCase()} works — add a different texture to stop it feeling flat`);
-  } else if(uniqueColors.length>=2){
-    const neutrals=['White','Cream','Beige','Ivory','Off-white','Black','Grey','Charcoal','Sand','Stone','Camel','Tan'];
-    const allNeutral=uniqueColors.every(c=>neutrals.includes(c));
-    if(allNeutral)tips.push('All-neutral palette — one accessory in a contrasting texture will give the look a focal point');
-    else{
-      const c1=uniqueColors[0],c2=uniqueColors[1];
-      tips.push(`${c1} and ${c2} together — keep your shoes and bag in one of these tones to tie everything in`);
-    }
+  const hasSlim=fits.some(f=>['Fitted','Slim','Tight','Skinny'].includes(f));
+  if(hasOversized&&hasSlim&&!hasDress){
+    tip.push(`The volume contrast is doing the work here — the oversized piece against the fitted one creates the silhouette, so don't add anything else bulky`);
+  } else if(hasOversized&&!hasSlim&&!hasDress&&outfit.length>=2){
+    tip.push(`Both pieces are relaxed — define your waist with a thin belt or a simple front tuck, otherwise the proportions can look unintentional`);
   }
 
-  // Footwear tip — specific to the shoe or a missing shoe
-  if(hasShoe){
+  // 3. Structure / layering tip (varies by outfit composition + style)
+  if(hasTop&&hasBot&&!hasOuter&&tip.length<2){
+    const topItem=outfit.find(i=>TOP_TYPES.includes(i.subtype||''));
+    const botItem=outfit.find(i=>BOT_TYPES.includes(i.subtype||''));
+    const topName=topItem?.name||'your top';
+    const botName=botItem?.name||'your bottom';
+    if(['oldmoney','minimal','preppy'].includes(sid)) tip.push(`Tuck the ${topName} fully into the ${botName} — a clean tuck is what makes this look polished rather than put-together`);
+    else if(sid==='streetwear'||sid==='urbancore') tip.push(`Keep the ${topName} untucked so the layers fall naturally — anything tucked-in will lose the relaxed energy`);
+    else if(sid==='downtown') tip.push(`A loose front tuck on the ${topName} gives shape without trying too hard`);
+    else if(tip.length<1) tip.push(`A half-tuck on the ${topName} — just the front — adds shape without making it look overdone`);
+  }
+  if(hasOuter&&tip.length<2){
+    const outerItem=outfit.find(i=>OUT_TYPES.includes(i.subtype||''));
+    const outerName=outerItem?.name||'the outer layer';
+    if(['oldmoney','preppy','romantic'].includes(sid)) tip.push(`Keep the ${outerName} fastened — one or two buttons max — structured looks intentional here`);
+    else if(sid==='downtown'||sid==='streetwear') tip.push(`Wear the ${outerName} open — push it slightly off the shoulders for the most effortless version of this`);
+    else if(tip.length<1) tip.push(`Open layering with the ${outerName} is the easiest version of this look — button only if the weather calls for it`);
+  }
+  if(hasDress&&!hasOuter&&tip.length<2){
+    const dressItem=outfit.find(i=>DRS_TYPES.includes(i.subtype||''));
+    const dressName=dressItem?.name||'the dress';
+    if(sid==='minimal') tip.push(`Let the ${dressName} be the whole look — nothing added`);
+    else if(sid==='romantic'||sid==='stargirl') tip.push(`A delicate belt at the waist of the ${dressName} adds shape and leans further into the aesthetic`);
+    else if(tip.length<1) tip.push(`Let the ${dressName} lead and keep accessories to one quiet piece`);
+  }
+
+  // 4. Footwear observation (specific to what they have or what's missing)
+  if(hasShoe&&tip.length<2){
     const shoe=outfit.find(i=>SHO_TYPES.includes(i.subtype||''));
     if(shoe){
-      const sub=shoe.subtype;
-      if(sub==='Sneakers'&&['oldmoney','preppy','romantic','dark'].includes(sid))
-        tips.push(`The sneakers work but loafers or Chelsea boots would push this look further into ${styleInfo.label.replace(/[✨🤍🧢🌊🎀💎🏙️🔩⭐💋📖🌿🖤🏃🎓🕰️]/u,'').trim()}`);
-      else if(['Boots','Ankle boots'].includes(sub))
-        tips.push('Tuck your trousers into the boots or roll them to the ankle to really show them off');
+      const sub=shoe.subtype,name=shoe.name;
+      if(sub==='Sneakers'&&['oldmoney','preppy','romantic'].includes(sid))
+        tip.push(`The ${name} work here but loafers or simple leather flats would feel more native to this aesthetic`);
       else if(sub==='Heels'&&sid==='streetwear')
-        tips.push('Heels with streetwear is a bold move — make sure the rest of the outfit is relaxed to balance it');
-      else if(sub==='Sandals'&&['dark','downtown','urbancore'].includes(sid))
-        tips.push('Sandals lighten this look — swap for boots or loafers to keep the mood consistent');
+        tip.push(`${name} with streetwear is a confident move — it only works if the rest of the outfit is fully relaxed`);
+      else if(sub==='Sandals'&&['urbancore','downtown'].includes(sid))
+        tip.push(`${name} lighten this look — boots or loafers would keep the mood more consistent`);
+      else if(['Boots','Ankle boots'].includes(sub)&&hasBot)
+        tip.push(`Roll or tuck your trousers just above the ${name} — show them off properly`);
     }
-  } else {
-    const shoeSug={my:'Shoes that feel right — trust your instinct',minimal:'Clean white trainers or simple black flats',oldmoney:'Loafers or leather pointed-toe flats',streetwear:'Chunky trainers or high-top sneakers',coquette:'Ballet flats or strappy kitten heels',dark:'Chelsea boots or platform leather boots',downtown:'Ankle boots or pointed loafers',boho:'Strappy leather sandals or tan ankle boots',stargirl:'Metallic sandals or silver-toned flats',romantic:'Mary Janes or block-heeled ankle boots',messyitgirl:'Worn-in trainers or simple ankle boots',coastal:'White leather sandals or espadrilles',y2k:'Platform boots or chunky colourful trainers',sporty:'Clean white trainers or low-profile sneakers',preppy:'Loafers or clean leather ballet flats',vintage:'Block-heeled boots or retro-style trainers',urbancore:'Chunky technical boots or platform sneakers'}[sid]||'Shoes in a neutral tone to ground the look';
-    tips.push(`Finish with: ${shoeSug}`);
   }
 
-  // Accessories tip — only if none in the outfit
-  if(!hasAcc){
-    const accSug={my:'One accessory that feels like you',minimal:'One fine gold ring or small studs — nothing more',oldmoney:'A structured leather bag and a watch or thin gold chain',coquette:'A bow clip and a layered dainty necklace',stargirl:'Layered star or moon jewellery and a sparkly bag',dark:'A structured leather satchel or dark canvas tote',downtown:'A shoulder bag and simple gold hoops',boho:'Stacked bracelets, rings and a woven bag',y2k:'Chunky colourful jewellery and a tiny logo bag',preppy:'A leather belt and a structured handbag',romantic:'A delicate pendant necklace and a tote or satchel',streetwear:'A crossbody bag and a cap or beanie',sporty:'A minimal sports watch or small crossbody',coastal:'A wicker bag or simple tote and a gold bracelet',vintage:'A silk scarf, a beret or cat-eye sunglasses',urbancore:'One functional bag — a belt bag or minimal backpack'}[sid]||'One accessory to give the look a focal point';
-    tips.push(`Add: ${accSug}`);
+  // 5. Missing shoe suggestion (always useful)
+  if(!hasShoe&&tip.length<2){
+    const shoeSug={oldmoney:'Leather loafers or pointed-toe flats',minimal:'Clean white trainers or simple black flats',streetwear:'Chunky trainers or high-top sneakers',coastal:'Leather sandals or espadrilles',downtown:'Ankle boots or pointed loafers',urbancore:'Chunky technical boots or platform sneakers',stargirl:'Metallic sandals or silver flats',romantic:'Mary Janes or block-heeled boots',sporty:'Clean white trainers or low-profile sneakers'}[sid]||'A neutral shoe in a tone already in the outfit';
+    tip.push(`Shoes to finish this: ${shoeSug}`);
   }
 
-  return tips.slice(0,2);
+  // 6. Missing accessories (only if nothing in outfit and haven't used 2 tips yet)
+  if(!hasAcc&&tip.length<2){
+    const accSug={oldmoney:'A structured leather bag and one thin gold chain — nothing more',minimal:'One delicate ring or small studs, that\'s it',streetwear:'A cap or crossbody bag',coastal:'A wicker bag or a single gold bracelet',downtown:'Gold hoops and a shoulder bag',stargirl:'Layered star or moon jewellery — the more delicate, the better',romantic:'A dainty pendant necklace and a fabric tote',sporty:'A simple sports watch or small crossbody'}[sid]||'One accessory to give the look a clear focal point';
+    tip.push(`Missing accessories: ${accSug}`);
+  }
+
+  return tip.slice(0,2);
 }
 
 function genStyleOutfits(styleInfo){
   if(!styleInfo)styleInfo=STYLES[0];
+  const sid=styleInfo.id;
 
+  // Per-style: which subtypes are allowed and which fits to prefer
   const STYLE_PREFS={
-    minimal:{subtypes:[...TOP_TYPES,...BOT_TYPES,...SHO_TYPES],fits:['Fitted','Slim','Regular']},
-    streetwear:{subtypes:[...TOP_TYPES,...BOT_TYPES,...SHO_TYPES],fits:['Oversized','Relaxed','Regular']},
-    coastal:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...SHO_TYPES],fits:['Relaxed','Regular','Loose']},
-    oldmoney:{subtypes:[...TOP_TYPES,...BOT_TYPES,...OUT_TYPES,...SHO_TYPES],fits:['Fitted','Regular','Tailored']},
-    downtown:{subtypes:[...TOP_TYPES,...BOT_TYPES,...OUT_TYPES,...SHO_TYPES],fits:['Regular','Fitted','Relaxed']},
-    urbancore:{subtypes:[...TOP_TYPES,...BOT_TYPES,...OUT_TYPES,...SHO_TYPES],fits:['Oversized','Relaxed','Regular']},
-    stargirl:{subtypes:[...TOP_TYPES,...DRS_TYPES,...SHO_TYPES,...ACC_TYPES],fits:['Fitted','Regular','Flowy']},
-    romantic:{subtypes:[...TOP_TYPES,...BOT_TYPES,...DRS_TYPES,...OUT_TYPES],fits:['Regular','Relaxed','Fitted']},
-    sporty:{subtypes:[...TOP_TYPES,...BOT_TYPES,...SHO_TYPES],fits:['Regular','Fitted','Athletic']},
+    minimal:{tops:[...TOP_TYPES].filter(t=>!['Hoodie','Cap','Crop top'].includes(t)),bots:[...BOT_TYPES].filter(t=>!['Running shorts','Cycling shorts'].includes(t)),fits:['Fitted','Slim','Regular']},
+    streetwear:{tops:[...TOP_TYPES],bots:[...BOT_TYPES],fits:['Oversized','Relaxed','Regular']},
+    coastal:{tops:[...TOP_TYPES].filter(t=>!['Hoodie'].includes(t)),bots:[...BOT_TYPES].filter(t=>!['Running shorts','Cycling shorts','Leggings'].includes(t)),drss:true,fits:['Relaxed','Regular','Loose']},
+    oldmoney:{tops:['Shirt','Blouse','Sweater','Cardigan','Top'],bots:['Jeans','Trousers','Pant','Skirt','Midi skirt','Maxi skirt'],outers:['Blazer','Trench coat','Coat'],shoes:['Loafers','Flats','Heels','Boots','Ankle boots','Mules'],fits:['Fitted','Regular','Tailored']},
+    downtown:{tops:[...TOP_TYPES].filter(t=>!['Sports bra','Running shorts'].includes(t)),bots:[...BOT_TYPES].filter(t=>!['Running shorts','Cycling shorts','Leggings'].includes(t)),outers:true,fits:['Regular','Fitted','Relaxed']},
+    urbancore:{tops:[...TOP_TYPES].filter(t=>!['Heels','Sandals','Flats'].includes(t)),bots:['Jeans','Trousers','Pant','Shorts','Leggings','Cargo'],outers:true,fits:['Oversized','Relaxed','Regular']},
+    stargirl:{tops:[...TOP_TYPES].filter(t=>!['Cap','Running shorts'].includes(t)),drss:true,fits:['Fitted','Regular']},
+    romantic:{tops:[...TOP_TYPES].filter(t=>!['Running shorts','Cycling shorts','Cap','Hoodie'].includes(t)),bots:[...BOT_TYPES].filter(t=>!['Running shorts','Cycling shorts'].includes(t)),drss:true,outers:['Cardigan','Blazer'],fits:['Regular','Relaxed','Fitted']},
+    sporty:{tops:['Top','Tank top','Sports bra','Hoodie','T-shirt','Crop top'],bots:['Running shorts','Leggings','Cycling shorts','Shorts'],shoes:['Sneakers'],fits:['Regular','Fitted']},
   };
 
-  const prefs=STYLE_PREFS[styleInfo.id]||{subtypes:[...TOP_TYPES,...BOT_TYPES],fits:[]};
+  const prefs=STYLE_PREFS[sid]||{tops:[...TOP_TYPES],bots:[...BOT_TYPES],fits:[]};
+  const blocklist=STYLE_BLOCKLIST[sid]||[];
   const palette=styleInfo.palette||null;
 
-  function colorScore(item){
-    if(!palette||!item.color)return 1;
-    return palette.some(p=>item.color.toLowerCase().includes(p.toLowerCase())||p.toLowerCase().includes(item.color.toLowerCase()))?3:0.2;
-  }
+  // Filter items strictly — blocked subtypes excluded
+  function eligible(i){ return !blocklist.includes(i.subtype||''); }
 
-  function fitScore(item){
-    if(!prefs.fits.length||!item.fit)return 1;
-    return prefs.fits.includes(item.fit)?2:0.8;
-  }
-
+  // Score an item for this style's palette + fit
   function scoreItem(item){
-    return colorScore(item)*fitScore(item)*(1+(item.wornCount||0)*0.1)+Math.random()*0.5;
+    let s=1;
+    if(palette&&item.color){
+      const matched=palette.some(p=>item.color.toLowerCase().includes(p.toLowerCase())||p.toLowerCase().includes(item.color.toLowerCase()));
+      s*=matched?2.5:0.3;
+    }
+    if(prefs.fits?.length&&item.fit){
+      s*=prefs.fits.includes(item.fit)?1.8:0.6;
+    }
+    return s;
   }
 
-  function pickBest(arr){
+  // Weighted random pick — higher score = more likely but not guaranteed
+  function weightedPick(arr){
     if(!arr.length)return null;
-    return arr.sort((a,b)=>scoreItem(b)-scoreItem(a))[0];
+    const scored=arr.map(i=>({i,s:scoreItem(i)+Math.random()*0.4}));
+    scored.sort((a,b)=>b.s-a.s);
+    // Pick from top 3 to allow some variety without losing style fit
+    const top=scored.slice(0,Math.min(3,scored.length));
+    return top[Math.floor(Math.random()*top.length)].i;
   }
 
-  const pool=items.filter(i=>prefs.subtypes.includes(i.subtype||'')||!prefs.subtypes.length);
-  const tops=pool.filter(i=>TOP_TYPES.includes(i.subtype||''));
-  const bots=pool.filter(i=>BOT_TYPES.includes(i.subtype||''));
-  const drss=pool.filter(i=>DRS_TYPES.includes(i.subtype||''));
-  const outs=pool.filter(i=>OUT_TYPES.includes(i.subtype||''));
-  const shoe=pool.filter(i=>SHO_TYPES.includes(i.subtype||''));
-  const accs=items.filter(i=>ACC_TYPES.includes(i.subtype||''));
+  // Build top/bottom pools from style prefs
+  const allowedTopSubs=prefs.tops||TOP_TYPES;
+  const allowedBotSubs=prefs.bots||BOT_TYPES;
+  const allowedOutSubs=prefs.outers===true?OUT_TYPES:(Array.isArray(prefs.outers)?prefs.outers:[]);
+  const allowedShoeSubs=prefs.shoes||SHO_TYPES;
+
+  const eligItems=items.filter(eligible);
+  const tops=eligItems.filter(i=>allowedTopSubs.includes(i.subtype||''));
+  const bots=eligItems.filter(i=>allowedBotSubs.includes(i.subtype||''));
+  const drss=eligItems.filter(i=>DRS_TYPES.includes(i.subtype||'')&&(prefs.drss!==false));
+  const outs=allowedOutSubs.length?eligItems.filter(i=>allowedOutSubs.includes(i.subtype||'')):[];
+  const shoe=eligItems.filter(i=>allowedShoeSubs.includes(i.subtype||''));
+  // Accessories: only style-appropriate ones
+  const styleAccBlocklist=blocklist.filter(s=>ACC_TYPES.includes(s));
+  const accs=items.filter(i=>ACC_TYPES.includes(i.subtype||'')&&!styleAccBlocklist.includes(i.subtype||''));
 
   const usedIds=new Set();
   const outfits=[];
+  const dressChance={stargirl:0.5,romantic:0.5,coastal:0.4}[sid]||0.2;
 
-  for(let attempt=0;attempt<12&&outfits.length<3;attempt++){
-    const outfit=[];
+  for(let attempt=0;attempt<20&&outfits.length<3;attempt++){
     const avail=arr=>arr.filter(i=>!usedIds.has(i.id));
-    const dressChance={stargirl:0.5,romantic:0.5,coastal:0.4}[styleInfo.id]||0.25;
+    const outfit=[];
 
+    // Core: dress OR top+bottom
     if(avail(drss).length&&Math.random()<dressChance){
-      const d=pickBest([...avail(drss)]);if(d)outfit.push(d);
+      const d=weightedPick(avail(drss));if(d)outfit.push(d);
     } else if(avail(tops).length&&avail(bots).length){
-      const t=pickBest([...avail(tops)]);if(t)outfit.push(t);
-      const b=pickBest([...avail(bots)]);if(b&&!outfit.find(x=>x.id===b.id))outfit.push(b);
+      const t=weightedPick(avail(tops));
+      if(t){
+        outfit.push(t);
+        // Pick bottom that harmonises with top's colour
+        const botCandidates=avail(bots).filter(b=>{
+          const colors=[t.color,b.color].filter(Boolean);
+          return colorCompatScore(colors)>0;
+        });
+        const b=weightedPick(botCandidates.length?botCandidates:avail(bots));
+        if(b)outfit.push(b);
+      }
     } else if(avail(drss).length){
-      const d=pickBest([...avail(drss)]);if(d)outfit.push(d);
-    } else continue;
+      const d=weightedPick(avail(drss));if(d)outfit.push(d);
+    }
 
+    // Validate core
     const hasDressCore=outfit.some(i=>DRS_TYPES.includes(i.subtype||''));
     const hasTopCore=outfit.some(i=>TOP_TYPES.includes(i.subtype||''));
     const hasBotCore=outfit.some(i=>BOT_TYPES.includes(i.subtype||''));
     if(!hasDressCore&&!(hasTopCore&&hasBotCore))continue;
 
-    const outerChance={oldmoney:0.6,downtown:0.65,romantic:0.55,urbancore:0.7}[styleInfo.id]||0.35;
-    if(avail(outs).length&&Math.random()<outerChance){
-      const o=pickBest([...avail(outs)]);if(o)outfit.push(o);
+    // Check colour compat of the core — if it clashes, skip this attempt
+    const coreColors=outfit.map(i=>i.color).filter(Boolean);
+    if(colorCompatScore(coreColors)===0)continue;
+
+    // Outer layer (style-dependent chance)
+    const outerChance={oldmoney:0.6,downtown:0.65,romantic:0.5,urbancore:0.7}[sid]||0.3;
+    if(outs.length&&avail(outs).length&&Math.random()<outerChance){
+      const o=weightedPick(avail(outs));if(o)outfit.push(o);
     }
-    if(avail(shoe).length){const s=pickBest([...avail(shoe)]);if(s)outfit.push(s);}
-    const accChance={stargirl:0.8,romantic:0.7,oldmoney:0.65}[styleInfo.id]||0.4;
-    if(avail(accs).length&&Math.random()<accChance){
-      const a=pickBest([...avail(accs)]);if(a)outfit.push(a);
+
+    // Shoes
+    if(avail(shoe).length){
+      const s=weightedPick(avail(shoe));if(s)outfit.push(s);
+    }
+
+    // Accessories — only sometimes, blocklist already applied
+    const accChance={stargirl:0.7,romantic:0.6,oldmoney:0.5,downtown:0.4}[sid]||0.25;
+    if(accs.length&&avail(accs).length&&Math.random()<accChance){
+      const a=weightedPick(avail(accs));if(a)outfit.push(a);
     }
 
     outfits.push(outfit);
     outfit.forEach(i=>usedIds.add(i.id));
   }
 
-  return outfits.map((outfit,oi)=>{
+  // Build "what's missing" gap card if we got fewer than 3 outfits
+  const missing=STYLE_MISSING_TIPS[sid]||{};
+  const hasTops=tops.length>0,hasBots=bots.length>0,hasDrss=drss.length>0,hasShoes=shoe.length>0;
+  const gaps=[];
+  if(!hasTops&&!hasDrss)gaps.push({label:'Tops or dresses',tip:missing.tops||missing.drss||'a top or dress in this style\'s palette'});
+  else if(!hasBots&&!hasDrss)gaps.push({label:'Bottoms',tip:missing.bots||'trousers or a skirt that fits this aesthetic'});
+  if(!hasShoes)gaps.push({label:'Shoes',tip:missing.shoes||'shoes in a style-appropriate style'});
+  if(outfits.length===0)gaps.push({label:'More items generally',tip:'At least a top and bottom (or a dress) are needed to build an outfit'});
+
+  const gapCard=outfits.length<3&&gaps.length?`<div style="background:var(--bg2);border-radius:var(--rl);padding:14px 16px;margin-bottom:10px;border:1px dashed var(--border2)">
+    <div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Not enough for more outfits</div>
+    <div style="font-size:13px;color:var(--text);margin-bottom:8px">To get more ${styleInfo.label.replace(/[^\w\s]/gu,'').trim()} looks, consider adding:</div>
+    ${gaps.map(g=>`<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px"><span style="font-size:14px">•</span><div><span style="font-weight:600">${g.label}:</span> <span style="color:var(--text2)">${g.tip}</span></div></div>`).join('')}
+    <button class="btn sm pr" onclick="nav('wishlist')" style="margin-top:8px">+ Add to wishlist</button>
+  </div>`:''
+
+  return [...outfits.map((outfit,oi)=>{
     const tips=getOutfitTip(outfit,styleInfo);
     const outfitName=styleInfo.names[oi%styleInfo.names.length];
-    const itemCards=outfit.map(item=>{
+    const itemIds=outfit.map(i=>i.id);
+
+    // Hero item: prefer one with a photo, otherwise pick top/dress
+    const withPhoto=outfit.filter(i=>(i.photos||[]).length>0);
+    const heroItem=withPhoto[0]||outfit.find(i=>TOP_TYPES.includes(i.subtype||'')||DRS_TYPES.includes(i.subtype||''))||outfit[0];
+    const heroPhoto=(heroItem?.photos||[])[0];
+    const heroH=hx(heroItem?.color);
+    const heroCat=cats.find(c=>c.id===heroItem?.category)||{};
+    const heroFg=isLight(heroH)?'#1a1705':'#faf9f6';
+
+    // Remaining items (not hero) as a compact row — fixed 52px squares
+    const sideItems=outfit.filter(i=>i.id!==heroItem?.id);
+    const sideRow=sideItems.map(item=>{
       const fp=(item.photos||[])[0];
+      const h=hx(item.color);const fg2=isLight(h)?'#1a1705':'#faf9f6';
       const cat=cats.find(c=>c.id===item.category)||{};
-      const h=hx(item.color);const fg=isLight(h)?'#1a1705':'#faf9f6';
-      return`<div onclick="openDetail('${item.id}')" style="cursor:pointer;text-align:center;flex:1;min-width:70px;max-width:100px">
-        ${fp?`<img src="${fp}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;margin-bottom:4px">`:`<div style="width:100%;aspect-ratio:1;border-radius:8px;background:${h};display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:4px;color:${fg}">${cat.icon||'👕'}</div>`}
-        <div style="font-size:10px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}</div>
-        <div style="font-size:9px;color:var(--text3)">${item.subtype||''}</div>
+      return`<div onclick="openDetail('${item.id}')" style="cursor:pointer;display:flex;flex-direction:column;align-items:center;width:52px;flex-shrink:0">
+        <div style="width:52px;height:52px;border-radius:7px;overflow:hidden;margin-bottom:3px;border:1px solid var(--border);flex-shrink:0">
+          ${fp?`<img src="${fp}" style="width:52px;height:52px;object-fit:cover;display:block">`:`<div style="width:52px;height:52px;background:${h};display:flex;align-items:center;justify-content:center;font-size:18px;color:${fg2}">${cat.icon||'👕'}</div>`}
+        </div>
+        <div style="font-size:9px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:52px;text-align:center">${item.subtype||''}</div>
       </div>`;
     }).join('');
-    const itemIds=outfit.map(i=>i.id);
-    return`<div class="card" style="padding:14px;margin-bottom:10px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div style="font-size:13px;font-weight:700">${outfitName}</div>
-        <button class="btn sm pr" onclick="saveInspoOutfit('${outfitName}','${styleInfo.id}',${JSON.stringify(itemIds)})">+ Save outfit</button>
+
+    // Colour swatch strip
+    const colorSwatches=outfit.map(i=>`<div title="${i.color||''}" style="width:14px;height:14px;border-radius:50%;background:${hx(i.color)};border:1px solid rgba(0,0,0,.12);flex-shrink:0"></div>`).join('');
+
+    return`<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:12px">
+      <div style="display:flex;gap:0">
+        <!-- Hero photo -->
+        <div onclick="openDetail('${heroItem?.id}')" style="cursor:pointer;width:100px;flex-shrink:0;background:${heroPhoto?'var(--bg2)':heroH};position:relative">
+          ${heroPhoto
+            ?`<img src="${heroPhoto}" style="width:100px;height:120px;object-fit:cover;display:block">`
+            :`<div style="width:100px;height:120px;display:flex;align-items:center;justify-content:center;font-size:34px;color:${heroFg}">${heroCat.icon||'👕'}</div>`}
+          <div style="position:absolute;bottom:6px;left:6px;background:rgba(0,0,0,.45);color:#fff;font-size:9px;font-weight:600;padding:2px 6px;border-radius:99px;backdrop-filter:blur(4px)">${heroItem?.subtype||''}</div>
+        </div>
+        <!-- Right panel -->
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;padding:12px 12px 10px">
+          <div style="font-family:'DM Serif Display',serif;font-size:15px;margin-bottom:2px;line-height:1.2">${outfitName}</div>
+          <div style="display:flex;gap:4px;align-items:center;margin-bottom:10px">${colorSwatches}</div>
+          <!-- Side items -->
+          <div style="display:flex;gap:6px;flex:1;align-items:flex-start">${sideRow||'<div style="font-size:11px;color:var(--text3)">Solo piece</div>'}</div>
+          <!-- Actions -->
+          <div style="margin-top:10px;display:flex;align-items:center;justify-content:flex-end">
+            <button class="btn sm pr" onclick="saveInspoOutfit('${outfitName}','${sid}',${JSON.stringify(itemIds)})">+ Save</button>
+          </div>
+        </div>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${itemCards}</div>
-      ${tips.length?`<div style="border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:4px">${tips.map(t=>`<div style="font-size:11px;color:var(--text2)">💡 ${t}</div>`).join('')}</div>`:''}
+      ${tips.length?`<div style="border-top:1px solid var(--border);padding:9px 12px;display:flex;flex-direction:column;gap:5px;background:var(--bg2)">${tips.map(t=>`<div style="font-size:11px;color:var(--text2);line-height:1.5">💡 ${t}</div>`).join('')}</div>`:''}
     </div>`;
-  });
+  }),gapCard?[gapCard]:[]].flat();
 }
 
 
 function saveToIdeas(idStr, tipsStr=''){
-  const preIds=idStr.split('|').filter(Boolean);
-  const preTips=tipsStr?decodeURIComponent(tipsStr):'';
-  nav('ideas');
-  setTimeout(()=>openAddIdea(null,preIds,preTips),100);
+  const name=prompt('Name this outfit idea:','Shuffled look');
+  if(!name)return;
+  const itemIds=idStr.split('|').filter(Boolean);
+  const idea={id:uid(),name:name.trim(),items:itemIds,createdAt:Date.now(),updatedAt:Date.now(),notes:tipsStr?decodeURIComponent(tipsStr):''};
+  ideas.push(idea);
+  updateBadges();
+  persist('ideas',idea);
+  showToast('Saved to Outfit ideas ✓');
 }
 
 // ── CALENDAR ──────────────────────────────────────────────────────────────────
@@ -3149,70 +3301,231 @@ function useTemplate(tmpl){
 
 function saveInspoOutfit(name, styleId, itemIds){
   const style=STYLES.find(s=>s.id===styleId);
-  const outfit={
-    id:'out-'+Date.now(),
-    name:name+' ('+( style?.label.replace(/[^a-zA-Z ]/g,'').trim()||'Inspo')+')',
-    items:itemIds,
-    createdAt:Date.now(),
-    style:styleId,
-    photos:[],
-  };
-  outfits.push(outfit);
-  fbSave('outfits',outfit);
-  showToast('Outfit saved to Ideas ✓');
+  const fullName=name+' ('+( style?.label.replace(/[^a-zA-Z\s]/gu,'').trim()||'Inspo')+')';
+  const idea={id:uid(),name:fullName,items:itemIds,createdAt:Date.now(),updatedAt:Date.now(),style:styleId,notes:''};
+  ideas.push(idea);
+  updateBadges();
+  persist('ideas',idea);
+  showToast('Saved to Outfit ideas ✓');
 }
 
 
 // ── MIX & MATCH BOARD ────────────────────────────────────────────────────────
 if(!window._mixBoard)window._mixBoard={};
+if(!window._mixAccs)window._mixAccs=[];
 
 function getMixSlots(){return[
+  {id:'outer',label:'Outerwear',emoji:'🧥',types:OUT_TYPES},
   {id:'top',label:'Top',emoji:'👕',types:TOP_TYPES},
   {id:'bottom',label:'Bottom',emoji:'👖',types:BOT_TYPES},
   {id:'dress',label:'Dress',emoji:'👗',types:DRS_TYPES},
-  {id:'outer',label:'Outerwear',emoji:'🧥',types:OUT_TYPES},
   {id:'shoes',label:'Shoes',emoji:'👟',types:SHO_TYPES},
-  {id:'acc',label:'Accessory',emoji:'💎',types:ACC_TYPES},
 ];}
 
-function rMixMatch(){
-  const board=window._mixBoard;
+// Accessory slots are dynamic — stored as window._mixAccs = [itemId, itemId, ...]
+function getMixAccs(){return window._mixAccs||(window._mixAccs=[]);}
 
-  const slots=getMixSlots().map(slot=>{
-    const item=board[slot.id]?items.find(i=>i.id===board[slot.id]):null;
+function rMixMatch(){
+  if(!window._mixView)window._mixView='flatlay';
+  const board=window._mixBoard;
+  const accs=getMixAccs();
+
+  // View toggle
+  const isFlatlay=window._mixView==='flatlay';
+  const viewToggle=`<div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:14px">
+    <button onclick="window._mixView='flatlay';rMixMatch()" style="padding:7px 14px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:600;color:${isFlatlay?'var(--accent)':'var(--text3)'};border-bottom:${isFlatlay?'2px solid var(--accent)':'2px solid transparent'};margin-bottom:-1px;font-family:'DM Sans',sans-serif">👗 Flat lay</button>
+    <button onclick="window._mixView='grid';rMixMatch()" style="padding:7px 14px;border:none;background:none;cursor:pointer;font-size:12px;font-weight:600;color:${!isFlatlay?'var(--accent)':'var(--text3)'};border-bottom:${!isFlatlay?'2px solid var(--accent)':'2px solid transparent'};margin-bottom:-1px;font-family:'DM Sans',sans-serif">⊞ Grid</button>
+  </div>`;
+
+  if(!isFlatlay){rMixMatchGrid(viewToggle);return;}
+
+  // ── FLAT-LAY CANVAS ──
+  // Zones rendered top-to-bottom: outer → top → bottom/dress → shoes
+  // Dress replaces top+bottom if filled
+
+  function zoneCell(slotId, label, emoji, types, heightPx){
+    const itemId=board[slotId];
+    const item=itemId?items.find(i=>i.id===itemId):null;
     const fp=item?(item.photos||[])[0]:null;
     const cat=item?cats.find(c=>c.id===item.category):null;
-    return`<div style="display:flex;flex-direction:column;gap:6px">
-      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;text-align:center">${slot.emoji} ${slot.label}</div>
-      <div onclick="openMixPicker('${slot.id}')" style="cursor:pointer;border-radius:12px;border:2px dashed ${item?'var(--accent)':'var(--border2)'};background:${item?'var(--bg2)':'var(--bg)'};aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;position:relative;transition:border-color .15s">
+    const filled=!!item;
+    return`<div style="position:relative;width:100%">
+      <div onclick="openMixPicker('${slotId}')" style="cursor:pointer;width:100%;height:${heightPx}px;border-radius:12px;border:2px dashed ${filled?'var(--accent)':'var(--border2)'};background:${filled?'var(--bg)':'var(--bg2)'};display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;transition:border-color .15s;position:relative">
         ${fp
-          ?`<img src="${fp}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0">`
+          ?`<img src="${fp}" style="width:100%;height:100%;object-fit:cover;object-position:center top">`
           :item
-            ?`<div style="font-size:32px">${cat?.icon||slot.emoji}</div><div style="font-size:10px;color:var(--text2);text-align:center;padding:0 6px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">${item.name}</div>`
-            :`<div style="font-size:28px;opacity:0.3">${slot.emoji}</div><div style="font-size:10px;color:var(--text3);margin-top:4px">Tap to pick</div>`
+            ?`<div style="font-size:36px">${cat?.icon||emoji}</div><div style="font-size:11px;color:var(--text2);text-align:center;padding:0 8px;margin-top:5px;font-weight:500">${item.name}</div>`
+            :`<div style="font-size:30px;opacity:.25">${emoji}</div><div style="font-size:10px;color:var(--text3);margin-top:4px;opacity:.6">${label}</div>`
         }
-        ${item?`<button onclick="event.stopPropagation();delete window._mixBoard['${slot.id}'];rMixMatch()" style="position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;border:none;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;z-index:1">×</button>`:''}
       </div>
-      ${item?`<div style="font-size:11px;font-weight:500;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}</div>`:''}
+      <div style="position:absolute;top:6px;left:8px;font-size:9px;font-weight:700;color:${filled?'var(--accent)':'var(--text3)'};text-transform:uppercase;letter-spacing:.06em;background:var(--bg);padding:1px 5px;border-radius:4px;opacity:.85">${label}</div>
+      ${filled?`<button onclick="event.stopPropagation();delete window._mixBoard['${slotId}'];rMixMatch()" style="position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;border:none;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;z-index:2;line-height:1">×</button>`:''}
+    </div>`;
+  }
+
+  // Middle zone mode: 'tb' = top+bottom, 'dress' = dress, 'both' = both
+  if(!window._mixMidMode)window._mixMidMode='tb';
+  const midMode=window._mixMidMode;
+  const midToggle=`<div style="display:flex;gap:4px;justify-content:center;margin-bottom:6px">
+    ${[['tb','👕 Top & Bottom'],['dress','👗 Dress'],['both','✨ Both']].map(([m,l])=>`<button onclick="window._mixMidMode='${m}';rMixMatch()" style="padding:4px 10px;border-radius:99px;border:1.5px solid ${midMode===m?'var(--accent)':'var(--border2)'};background:${midMode===m?'var(--accent)':'transparent'};color:${midMode===m?'var(--afg)':'var(--text2)'};font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap">${l}</button>`).join('')}
+  </div>`;
+
+  const outerCell=zoneCell('outer','Outerwear','🧥',OUT_TYPES,130);
+  const topCell=zoneCell('top','Top','👕',TOP_TYPES,170);
+  const botCell=zoneCell('bottom','Bottom','👖',BOT_TYPES,170);
+  const dressCell=zoneCell('dress','Dress','👗',DRS_TYPES,midMode==='both'?260:340);
+  const shoeCell=zoneCell('shoes','Shoes','👟',SHO_TYPES,130);
+
+  const midZone=midMode==='tb'
+    ?`<div style="display:flex;flex-direction:column;gap:6px">${topCell}${botCell}</div>`
+    :midMode==='dress'
+      ?dressCell
+      :`<div style="display:flex;gap:6px">
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px">${topCell}${botCell}</div>
+          <div style="flex:1">${dressCell}</div>
+        </div>`;
+
+  // ── ACCESSORIES ROW ──
+  const accItems=accs.map(id=>items.find(i=>i.id===id)).filter(Boolean);
+  const accChips=accItems.map((item,idx)=>{
+    const fp=(item.photos||[])[0];
+    const cat=cats.find(c=>c.id===item.category)||{};
+    const h=hx(item.color);const fg=isLight(h)?'#1a1705':'#faf9f6';
+    return`<div style="position:relative;flex-shrink:0">
+      <div onclick="openMixAccPicker(${idx})" style="cursor:pointer;width:56px;height:56px;border-radius:10px;border:2px solid var(--accent);overflow:hidden;background:${fp?'var(--bg2)':h}">
+        ${fp?`<img src="${fp}" style="width:56px;height:56px;object-fit:cover;display:block">`:`<div style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-size:20px;color:${fg}">${cat.icon||'💎'}</div>`}
+      </div>
+      <button onclick="window._mixAccs.splice(${idx},1);rMixMatch()" style="position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--afg);border:none;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;z-index:2;line-height:1">×</button>
+      <div style="font-size:9px;text-align:center;margin-top:3px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:56px">${item.subtype||''}</div>
     </div>`;
   }).join('');
 
-  const hasItems=Object.keys(board).length>0;
+  const addAccBtn=`<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px">
+    <div onclick="openMixAccPicker(-1)" style="cursor:pointer;width:56px;height:56px;border-radius:10px;border:2px dashed var(--border2);background:var(--bg2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
+      <div style="font-size:20px;opacity:.3">💎</div>
+      <div style="font-size:9px;color:var(--text3)">Add</div>
+    </div>
+  </div>`;
 
-  sCt(`<div style="padding:14px 16px">
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
-      ${slots}
+  const accsSection=`<div style="margin-top:10px">
+    <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">💎 Accessories</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start">${accChips}${addAccBtn}</div>
+  </div>`;
+
+  const hasItems=Object.values(board).some(Boolean)||accs.length>0;
+
+  sCt(`<div style="padding:14px 16px 24px">
+    ${viewToggle}
+    <div style="max-width:420px;margin:0 auto">
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:4px">
+        ${outerCell}
+        ${midToggle}
+        ${midZone}
+        ${shoeCell}
+      </div>
+      ${accsSection}
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn" style="flex:1;border:1px solid var(--border2)" onclick="window._mixBoard={};window._mixAccs=[];rMixMatch()" ${!hasItems?'disabled':''}>Clear</button>
+        <button class="btn pr" style="flex:2" onclick="saveMixOutfit()" ${!hasItems?'disabled':''}>💾 Save outfit</button>
+      </div>
+      <button class="btn" style="width:100%;margin-top:8px;border:1px solid var(--border2)" onclick="randomiseMix()">🔀 Randomise</button>
     </div>
-    <div style="display:flex;gap:8px">
-      <button class="btn" style="flex:1;border:1px solid var(--border2)" onclick="window._mixBoard={};rMixMatch()" ${!hasItems?'disabled':''}>Clear</button>
-      <button class="btn pr" style="flex:2" onclick="saveMixOutfit()" ${!hasItems?'disabled':''}>💾 Save as outfit</button>
-    </div>
-    ${hasItems?`<button class="btn" style="width:100%;margin-top:8px;border:1px solid var(--border2)" onclick="randomiseMix()">🔀 Randomise empty slots</button>`:''}
   </div>`);
 }
 
+function rMixMatchGrid(viewToggle){
+  const board=window._mixBoard;
+  const accs=getMixAccs();
+  const allSlots=[...getMixSlots(),{id:'acc',label:'Accessories',emoji:'💎',types:ACC_TYPES}];
+  const slots=allSlots.map(slot=>{
+    const itemId=board[slot.id];
+    const item=itemId?items.find(i=>i.id===itemId):null;
+    // For acc slot show first acc item if any
+    const accItem=slot.id==='acc'?(accs.length>0?items.find(i=>i.id===accs[0]):null):null;
+    const displayItem=slot.id==='acc'?accItem:item;
+    const fp=displayItem?(displayItem.photos||[])[0]:null;
+    const cat=displayItem?cats.find(c=>c.id===displayItem.category):null;
+    const filled=!!displayItem;
+    const h=displayItem?hx(displayItem.color):'var(--bg2)';
+    const clickFn=slot.id==='acc'?`openMixAccPicker(0)`:`openMixPicker('${slot.id}')`;
+    const removeFn=slot.id==='acc'
+      ?`window._mixAccs=[];rMixMatch()`
+      :`delete window._mixBoard['${slot.id}'];rMixMatch()`;
+    return`<div style="position:relative">
+      <div onclick="${clickFn}" style="cursor:pointer;border-radius:12px;border:2px dashed ${filled?'var(--accent)':'var(--border2)'};background:${filled?h:'var(--bg2)'};aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;position:relative">
+        ${fp
+          ?`<img src="${fp}" style="width:100%;height:100%;object-fit:cover;display:block">`
+          :displayItem
+            ?`<div style="font-size:32px">${cat?.icon||slot.emoji}</div><div style="font-size:10px;color:var(--text2);text-align:center;padding:0 6px;margin-top:4px;font-weight:500;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${displayItem.name}</div>`
+            :`<div style="font-size:26px;opacity:.25">${slot.emoji}</div><div style="font-size:10px;color:var(--text3);margin-top:4px;opacity:.6">${slot.label}</div>`
+        }
+        ${slot.id==='acc'&&accs.length>1?`<div style="position:absolute;bottom:5px;right:7px;font-size:10px;font-weight:700;color:var(--accent);background:var(--bg);padding:1px 5px;border-radius:99px">+${accs.length-1}</div>`:''}
+      </div>
+      <div style="position:absolute;top:5px;left:7px;font-size:9px;font-weight:700;color:${filled?'var(--accent)':'var(--text3)'};text-transform:uppercase;letter-spacing:.06em;background:var(--bg);padding:1px 5px;border-radius:4px;opacity:.85">${slot.label}</div>
+      ${filled?`<button onclick="event.stopPropagation();${removeFn}" style="position:absolute;top:5px;right:5px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;border:none;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;z-index:2;line-height:1">×</button>`:''}
+    </div>`;
+  }).join('');
+
+  const hasItems=Object.values(board).some(Boolean)||accs.length>0;
+  sCt(`<div style="padding:14px 16px 24px">
+    ${viewToggle}
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+      ${slots}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn" style="flex:1;border:1px solid var(--border2)" onclick="window._mixBoard={};window._mixAccs=[];rMixMatch()" ${!hasItems?'disabled':''}>Clear</button>
+      <button class="btn pr" style="flex:2" onclick="saveMixOutfit()" ${!hasItems?'disabled':''}>💾 Save outfit</button>
+    </div>
+    <button class="btn" style="width:100%;margin-top:8px;border:1px solid var(--border2)" onclick="randomiseMix()">🔀 Randomise</button>
+  </div>`);
+}
+
+function openMixAccPicker(idx){
+  // idx === -1 means add new, otherwise replace existing
+  const pool=items.filter(i=>ACC_TYPES.includes(i.subtype||''));
+  let modal=gi('mix-picker-modal');
+  if(!modal){modal=document.createElement('div');modal.id='mix-picker-modal';modal.className='ov';document.body.appendChild(modal);}
+  const render=()=>{
+    const q=(gi('mix-search')?.value||'').toLowerCase();
+    const filtered=pool.filter(i=>!q||i.name.toLowerCase().includes(q)||(i.subtype||'').toLowerCase().includes(q));
+    modal.innerHTML=`<div class="modal" style="max-width:480px">
+      <div class="mh">
+        <h2 style="font-family:'DM Serif Display',serif;font-size:16px">💎 Pick an accessory</h2>
+        <button class="btn gh sm" onclick="gi('mix-picker-modal').style.display='none'">✕</button>
+      </div>
+      <div class="mb" style="max-height:70vh;overflow-y:auto">
+        <input class="inp" id="mix-search" placeholder="Search..." oninput="openMixAccPicker(${idx})" style="margin-bottom:10px;width:100%">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          ${filtered.map(i=>{
+            const fp=(i.photos||[])[0];const cat=cats.find(c=>c.id===i.category);
+            return`<div onclick="selectMixAcc(${idx},'${i.id}')" style="cursor:pointer;border-radius:10px;border:2px solid var(--border);overflow:hidden;background:var(--bg)">
+              ${fp?`<img src="${fp}" style="width:100%;aspect-ratio:1;object-fit:cover">`:`<div style="width:100%;aspect-ratio:1;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:28px">${cat?.icon||'💎'}</div>`}
+              <div style="padding:6px 8px"><div style="font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.name}</div><div style="font-size:10px;color:var(--text3)">${i.subtype||''}</div></div>
+            </div>`;
+          }).join('')}
+          ${!filtered.length?`<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text3);font-size:13px">No accessories found</div>`:''}
+        </div>
+      </div>
+    </div>`;
+    modal.style.display='flex';
+  };
+  render();
+}
+
+function selectMixAcc(idx,itemId){
+  const accs=getMixAccs();
+  if(idx===-1)accs.push(itemId);
+  else accs[idx]=itemId;
+  window._mixAccs=accs;
+  const modal=gi('mix-picker-modal');
+  if(modal)modal.style.display='none';
+  rMixMatch();
+}
+
 function openMixPicker(slotId){
-  const slot=getMixSlots().find(s=>s.id===slotId);
+  // Support 'dress' slot dynamically even though it's not in getMixSlots
+  const allSlots=[...getMixSlots(),{id:'dress',label:'Dress',emoji:'👗',types:DRS_TYPES}];
+  const slot=allSlots.find(s=>s.id===slotId);
   if(!slot)return;
   const pool=items.filter(i=>slot.types.includes(i.subtype||''));
 
@@ -3253,7 +3566,8 @@ function openMixPicker(slotId){
 }
 
 function renderMixPickerItems(slotId){
-  const slot=getMixSlots().find(s=>s.id===slotId);
+  const allSlots=[...getMixSlots(),{id:'dress',label:'Dress',emoji:'👗',types:DRS_TYPES}];
+  const slot=allSlots.find(s=>s.id===slotId);
   const q=(gi('mix-search')?.value||'').toLowerCase();
   const pool=items.filter(i=>slot.types.includes(i.subtype||''));
   const filtered=pool.filter(i=>!q||i.name.toLowerCase().includes(q));
@@ -3278,30 +3592,35 @@ function selectMixItem(slotId,itemId){
 }
 
 function randomiseMix(){
-  getMixSlots().forEach(slot=>{
+  const allSlots=[...getMixSlots(),{id:'dress',label:'Dress',emoji:'👗',types:DRS_TYPES}];
+  allSlots.forEach(slot=>{
     if(!window._mixBoard[slot.id]){
       const pool=items.filter(i=>slot.types.includes(i.subtype||''));
       if(pool.length)window._mixBoard[slot.id]=pool[Math.floor(Math.random()*pool.length)].id;
     }
   });
+  // Randomise one accessory if none yet
+  if(!getMixAccs().length){
+    const accPool=items.filter(i=>ACC_TYPES.includes(i.subtype||''));
+    if(accPool.length)window._mixAccs=[accPool[Math.floor(Math.random()*accPool.length)].id];
+  }
   rMixMatch();
 }
 
 async function saveMixOutfit(){
   const name=prompt('Name this outfit:');
   if(!name)return;
-  const itemIds=Object.values(window._mixBoard).filter(Boolean);
-  const outfit={
-    id:'out-'+Date.now(),
-    name:name.trim(),
-    items:itemIds,
-    createdAt:Date.now(),
-    photos:[],
-  };
-  outfits.push(outfit);
-  await fbSave('outfits',outfit);
-  showToast('Outfit saved ✓');
+  const boardIds=Object.values(window._mixBoard).filter(Boolean);
+  const accIds=getMixAccs().filter(Boolean);
+  const itemIds=[...boardIds,...accIds];
+  if(!itemIds.length){showToast('Add some items first');return;}
+  const idea={id:uid(),name:name.trim(),items:itemIds,createdAt:Date.now(),updatedAt:Date.now(),notes:'Created in Mix & match'};
+  ideas.push(idea);
+  updateBadges();
+  persist('ideas',idea);
+  showToast('Outfit idea saved ✓');
   window._mixBoard={};
+  window._mixAccs=[];
   window._ideasTab='outfits';
   rIdeas();
 }
@@ -3486,13 +3805,13 @@ function renderClosetView(list){
       const cat=cats.find(c=>c.id===item.category);
       const h=hx(item.color||'');
       const fg=isLight(h)?'#1a1705':'#faf9f6';
-      return`<div onclick="openDetail('${item.id}')" style="cursor:pointer;flex-shrink:0;width:100px;display:flex;flex-direction:column;align-items:center">
+      return`<div onclick="openDetail('${item.id}')" style="cursor:pointer;flex-shrink:0;width:clamp(100px,13vw,130px);display:flex;flex-direction:column;align-items:center">
         <svg width="40" height="16" viewBox="0 0 40 16">
           <path d="M20,2 Q20,0 22,0 Q26,0 26,4 Q26,6 20,8 Q14,6 14,4 Q14,0 18,0 Q20,0 20,2" fill="none" stroke="var(--text3)" stroke-width="1.2"/>
           <path d="M20,8 L4,14 Q2,15 2,16 L38,16 Q38,15 36,14 Z" fill="none" stroke="var(--text3)" stroke-width="1.2"/>
         </svg>
-        <div style="width:90px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--bg);box-shadow:0 2px 8px rgba(0,0,0,.06)">
-          ${fp?`<img src="${fp}" style="width:100%;height:110px;object-fit:cover;display:block">`:`<div style="width:100%;height:110px;background:${h};display:flex;align-items:center;justify-content:center;font-size:32px;color:${fg}">${cat?.icon||rail.emoji}</div>`}
+        <div style="width:calc(100% - 10px);border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--bg);box-shadow:0 2px 8px rgba(0,0,0,.06)">
+          ${fp?`<img src="${fp}" style="width:100%;height:clamp(110px,14vw,150px);object-fit:cover;display:block">`:`<div style="width:100%;height:clamp(110px,14vw,150px);background:${h};display:flex;align-items:center;justify-content:center;font-size:clamp(32px,4vw,44px);color:${fg}">${cat?.icon||rail.emoji}</div>`}
           <div style="padding:6px 8px">
             <div style="font-size:10px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.name}</div>
             <div style="font-size:9px;color:var(--text3)">${item.subtype||''}</div>
@@ -3508,7 +3827,7 @@ function renderClosetView(list){
       </div>
       <div style="padding:0 16px">
         <div style="height:4px;background:linear-gradient(90deg,transparent,var(--text2) 10%,var(--text2) 90%,transparent);border-radius:99px;box-shadow:0 2px 4px rgba(0,0,0,.15)"></div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;padding:8px 0 12px">${itemCards}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:16px;padding:8px 0 12px">${itemCards}</div>
       </div>
     </div>`;
   }).filter(Boolean).join('');
@@ -3558,17 +3877,17 @@ function rCloset(){
       const h=hx(item.color||'');
       const fg=isLight(h)?'#1a1705':'#faf9f6';
       const worn=item.wornCount||0;
-      return`<div onclick="openDetail('${item.id}')" style="cursor:pointer;flex-shrink:0;width:100px;display:flex;flex-direction:column;align-items:center;gap:0">
+      return`<div onclick="openDetail('${item.id}')" style="cursor:pointer;flex-shrink:0;width:clamp(100px,13vw,130px);display:flex;flex-direction:column;align-items:center;gap:0">
         <!-- Hanger -->
         <svg width="40" height="18" viewBox="0 0 40 18" style="flex-shrink:0">
           <path d="M20,2 Q20,0 22,0 Q26,0 26,4 Q26,7 20,9 Q14,7 14,4 Q14,0 18,0 Q20,0 20,2" fill="none" stroke="var(--text3)" stroke-width="1.2"/>
           <path d="M20,9 L4,16 Q2,17 2,18 L38,18 Q38,17 36,16 Z" fill="none" stroke="var(--text3)" stroke-width="1.2"/>
         </svg>
         <!-- Item -->
-        <div style="width:90px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--bg);box-shadow:0 2px 8px rgba(0,0,0,.06)">
+        <div style="width:calc(100% - 10px);border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--bg);box-shadow:0 2px 8px rgba(0,0,0,.06)">
           ${fp
-            ?`<img src="${fp}" style="width:100%;height:110px;object-fit:cover;display:block">`
-            :`<div style="width:100%;height:110px;background:${h};display:flex;align-items:center;justify-content:center;font-size:32px;color:${fg}">${cat?.icon||rail.emoji}</div>`
+            ?`<img src="${fp}" style="width:100%;height:clamp(110px,14vw,150px);object-fit:cover;display:block">`
+            :`<div style="width:100%;height:clamp(110px,14vw,150px);background:${h};display:flex;align-items:center;justify-content:center;font-size:clamp(32px,4vw,44px);color:${fg}">${cat?.icon||rail.emoji}</div>`
           }
           <div style="padding:6px 8px;background:var(--bg)">
             <div style="font-size:10px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${item.name}</div>
@@ -3590,7 +3909,7 @@ function rCloset(){
       <div style="position:relative;padding:0 16px">
         <div style="height:3px;background:linear-gradient(90deg,var(--border2),var(--text3) 20%,var(--text3) 80%,var(--border2));border-radius:99px;margin-bottom:0"></div>
         <!-- Items hanging from rail -->
-        <div style="display:flex;flex-wrap:wrap;gap:8px;padding-top:4px;padding-bottom:8px">
+        <div style="display:flex;flex-wrap:wrap;gap:16px;padding-top:4px;padding-bottom:8px">
           ${itemCards}
         </div>
       </div>
