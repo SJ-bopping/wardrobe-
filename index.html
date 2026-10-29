@@ -368,7 +368,7 @@ let eItemId=null,vItemId=null,eOutfitId=null,eCatId=null,eIdeaId=null;
 let selOut=new Set(),piPhotos=[],poPhotos=[];
 let ideaSel=new Set();
 
-const DEFAULT_CATS=[{id:'cat-tops',name:'Tops',icon:'👕'},{id:'cat-bottoms',name:'Bottoms',icon:'👖'},{id:'cat-dresses',name:'Dresses & Skirts',icon:'👗'},{id:'cat-outer',name:'Outerwear',icon:'🧥'},{id:'cat-shoes',name:'Footwear',icon:'👟'},{id:'cat-acc',name:'Accessories',icon:'👜'},{id:'cat-sport',name:'Sportswear',icon:'🏃'},{id:'cat-other',name:'Other',icon:'🏷️'}];
+const DEFAULT_CATS=[{id:'cat-tops',name:'Tops',icon:'👕'},{id:'cat-bottoms',name:'Bottoms',icon:'👖'},{id:'cat-dresses',name:'Dresses & Skirts',icon:'👗'},{id:'cat-outer',name:'Outerwear',icon:'🧥'},{id:'cat-shoes',name:'Footwear',icon:'👟'},{id:'cat-acc',name:'Accessories',icon:'👜'},{id:'cat-sport',name:'Activewear',icon:'🏃'},{id:'cat-intimate',name:'Intimates & Loungewear',icon:'🩱'},{id:'cat-other',name:'Other',icon:'🏷️'}];
 
 const COLORS=[
   // ── Whites, Creams, Neutrals, Greys & Black ─────────────────────
@@ -587,10 +587,25 @@ function openDetail(id){
   // Photo gallery state
   window._detailPhotoIdx=0;
   const totalPhotos=photos.length;
+  window._setMainPhoto=async(itemId,idx)=>{
+    const it=items.find(i=>i.id===itemId);if(!it||!idx)return;
+    const ps=[...it.photos];ps.unshift(ps.splice(idx,1)[0]);
+    it.photos=ps;it.photo=ps[0];
+    items=items.map(i=>i.id===itemId?it:i);
+    await persist('items',it);
+    window._detailPhotoIdx=0;
+    gi('det-gallery').innerHTML=window.galleryHtmlFn(0);
+    renderCurrent();showToast('Main photo set ✓');
+  };
   function galleryHtml(idx){
     if(!totalPhotos)return`<div style="height:200px;border-radius:12px;background:${h};color:${fg};display:flex;align-items:center;justify-content:center;font-size:48px;margin-bottom:13px;border:1px solid rgba(0,0,0,.07)">${cat.icon||'👕'}</div>`;
+    const isMain=idx===0;
     return`<div style="position:relative;margin-bottom:13px">
       <img src="${photos[idx]}" style="width:100%;border-radius:12px;display:block;max-height:320px;object-fit:cover">
+      ${isMain
+        ?`<div style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,.5);color:#ffd700;border-radius:99px;padding:3px 8px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:3px">⭐ Main</div>`
+        :`<button onclick="window._setMainPhoto('${id}',${idx})" style="position:absolute;top:8px;left:8px;background:rgba(0,0,0,.45);color:#fff;border:none;border-radius:99px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:3px">☆ Set as main</button>`
+      }
       ${totalPhotos>1?`<div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:5px">
         ${photos.map((_,i)=>`<div style="width:6px;height:6px;border-radius:50%;background:${i===idx?'#fff':'rgba(255,255,255,.5)'}"></div>`).join('')}
       </div>
@@ -968,6 +983,8 @@ const OUT_TYPES=['Jacket','Coat','Blazer','Gilet','Trench coat','Puffer jacket',
 const DRS_TYPES=['Dress','Mini dress','Midi dress','Maxi dress','Jumpsuit','Co-ord set','Two-piece set','Suit'];
 const SHO_TYPES=['Sneakers','Boots','Ankle boots','Heels','Sandals','Loafers','Flats','Slippers','Mules','Platform shoes'];
 const ACC_TYPES=['Belt','Hat','Cap','Beanie','Scarf','Bag','Handbag','Tote bag','Backpack','Sunglasses','Jewellery','Necklace','Watch'];
+const ACT_TYPES=['Sports bra','Running shorts','Running tights','Gym shorts','Activewear top','Athletic wear','Swimwear','Bikini','Swimsuit','Wetsuit','Sports jacket','Track jacket','Track pants','Joggers'];
+const INT_TYPES=['Bra','Underwear','Briefs','Boxers','Thong','Lingerie','Bodystocking','Corset','Slip','Camisole','Nightwear','Pyjamas','Robe','Loungewear'];
 
 const STYLES=[
   {id:'minimal',label:'🤍 Minimalist',desc:'Clean lines, neutral tones, intentional simplicity',palette:['White','Off-white','Ivory','Cream','Black','Grey','Charcoal','Beige','Camel','Sand','Stone','Light grey','Silver'],
@@ -3787,14 +3804,19 @@ function renderColourView(list){
 }
 
 function renderClosetView(list){
+  const ALL_TYPED=TOP_TYPES.concat(BOT_TYPES,DRS_TYPES,OUT_TYPES,SHO_TYPES,ACC_TYPES,ACT_TYPES,INT_TYPES);
+  const ALL_CAT_IDS=['cat-tops','cat-bottoms','cat-dresses','cat-outer','cat-shoes','cat-acc','cat-sport','cat-intimate'];
+  const _inRail=(i,types,catIds)=>types.includes(i.subtype||'')||(catIds.includes(i.category)&&!ALL_TYPED.includes(i.subtype||''));
   const TYPE_RAILS=[
-    {label:'Tops',emoji:'👕',filter:i=>TOP_TYPES.includes(i.subtype||'')},
-    {label:'Bottoms',emoji:'👖',filter:i=>BOT_TYPES.includes(i.subtype||'')},
-    {label:'Dresses & One-pieces',emoji:'👗',filter:i=>DRS_TYPES.includes(i.subtype||'')},
-    {label:'Outerwear',emoji:'🧥',filter:i=>OUT_TYPES.includes(i.subtype||'')},
-    {label:'Footwear',emoji:'👟',filter:i=>SHO_TYPES.includes(i.subtype||'')},
-    {label:'Accessories',emoji:'💎',filter:i=>ACC_TYPES.includes(i.subtype||'')},
-    {label:'Other',emoji:'📦',filter:i=>!TOP_TYPES.includes(i.subtype||'')&&!BOT_TYPES.includes(i.subtype||'')&&!DRS_TYPES.includes(i.subtype||'')&&!OUT_TYPES.includes(i.subtype||'')&&!SHO_TYPES.includes(i.subtype||'')&&!ACC_TYPES.includes(i.subtype||'')},
+    {label:'Tops',emoji:'👕',filter:i=>_inRail(i,TOP_TYPES,['cat-tops'])},
+    {label:'Bottoms',emoji:'👖',filter:i=>_inRail(i,BOT_TYPES,['cat-bottoms'])},
+    {label:'Dresses & One-pieces',emoji:'👗',filter:i=>_inRail(i,DRS_TYPES,['cat-dresses'])},
+    {label:'Outerwear',emoji:'🧥',filter:i=>_inRail(i,OUT_TYPES,['cat-outer'])},
+    {label:'Footwear',emoji:'👟',filter:i=>_inRail(i,SHO_TYPES,['cat-shoes'])},
+    {label:'Accessories',emoji:'💎',filter:i=>_inRail(i,ACC_TYPES,['cat-acc'])},
+    {label:'Activewear',emoji:'🏃',filter:i=>_inRail(i,ACT_TYPES,['cat-sport'])},
+    {label:'Intimates & Loungewear',emoji:'🩱',filter:i=>_inRail(i,INT_TYPES,['cat-intimate'])},
+    {label:'Other',emoji:'📦',filter:i=>!ALL_TYPED.includes(i.subtype||'')&&!ALL_CAT_IDS.includes(i.category)},
   ];
 
   const rails=TYPE_RAILS.map(rail=>{
@@ -3856,13 +3878,17 @@ function rCloset(){
   }
 
   // Group items by type category
+  const ALL_TYPED2=TOP_TYPES.concat(BOT_TYPES,DRS_TYPES,OUT_TYPES,SHO_TYPES,ACC_TYPES,ACT_TYPES,INT_TYPES);
+  const _inRail2=(i,types,catIds)=>types.includes(i.subtype||'')||(catIds.includes(i.category)&&!ALL_TYPED2.includes(i.subtype||''));
   const TYPE_RAILS=[
-    {label:'Tops',emoji:'👕',filter:i=>TOP_TYPES.includes(i.subtype||'')},
-    {label:'Bottoms',emoji:'👖',filter:i=>BOT_TYPES.includes(i.subtype||'')},
-    {label:'Dresses & One-pieces',emoji:'👗',filter:i=>DRS_TYPES.includes(i.subtype||'')},
-    {label:'Outerwear',emoji:'🧥',filter:i=>OUT_TYPES.includes(i.subtype||'')},
-    {label:'Footwear',emoji:'👟',filter:i=>SHO_TYPES.includes(i.subtype||'')},
-    {label:'Accessories',emoji:'💎',filter:i=>ACC_TYPES.includes(i.subtype||'')},
+    {label:'Tops',emoji:'👕',filter:i=>_inRail2(i,TOP_TYPES,['cat-tops'])},
+    {label:'Bottoms',emoji:'👖',filter:i=>_inRail2(i,BOT_TYPES,['cat-bottoms'])},
+    {label:'Dresses & One-pieces',emoji:'👗',filter:i=>_inRail2(i,DRS_TYPES,['cat-dresses'])},
+    {label:'Outerwear',emoji:'🧥',filter:i=>_inRail2(i,OUT_TYPES,['cat-outer'])},
+    {label:'Footwear',emoji:'👟',filter:i=>_inRail2(i,SHO_TYPES,['cat-shoes'])},
+    {label:'Accessories',emoji:'💎',filter:i=>_inRail2(i,ACC_TYPES,['cat-acc'])},
+    {label:'Activewear',emoji:'🏃',filter:i=>_inRail2(i,ACT_TYPES,['cat-sport'])},
+    {label:'Intimates & Loungewear',emoji:'🩱',filter:i=>_inRail2(i,INT_TYPES,['cat-intimate'])},
   ];
 
   const pool=activeCat==='all'?items:items.filter(i=>i.category===activeCat);
