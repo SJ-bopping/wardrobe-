@@ -145,8 +145,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent);}
 .txa{padding:9px 12px;resize:vertical;min-height:64px;line-height:1.5;border-radius:10px;}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .cr{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
-.cd{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:all .12s;flex-shrink:0;}
-.cd.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--accent);}
+.cd{width:44px;cursor:pointer;border:2px solid transparent;border-radius:7px;transition:all .12s;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:2px;background:transparent;}
+.cd-swatch{width:40px;height:28px;border-radius:4px;border:1px solid rgba(0,0,0,.08);}
+.cd-name{font-size:8px;line-height:1.2;text-align:center;color:var(--text3);word-break:break-word;}
+.cd.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent);}
 .cw{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;max-height:180px;overflow-y:auto;}
 .chip{font-size:12px;padding:5px 11px;border-radius:99px;border:1px solid var(--border2);background:var(--bg);color:var(--text2);cursor:pointer;transition:all .12s;display:inline-flex;align-items:center;gap:5px;}
 .chip.on{background:var(--accent);color:var(--afg);border-color:transparent;}
@@ -385,78 +387,67 @@ const COLORS=[
   {n:'Steel grey',h:'#607D8B'},{n:'Dark grey',h:'#5A5A5A'},{n:'Charcoal',h:'#4a4a4a'},
   {n:'Graphite',h:'#383838'},{n:'Soft black',h:'#2D2D2D'},{n:'Black',h:'#1a1a1a'},
   // ── Reds ────────────────────────────────────────────────────────
-  {g:'Reds',n:'Pale red',h:'#FF9999'},{n:'Salmon',h:'#FA8072'},
-  {n:'Light pink red',h:'#FF7F7F'},{n:'Tomato',h:'#FF6347'},{n:'Coral red',h:'#FF4136'},
-  {n:'Orange red',h:'#FF4500'},{n:'Red',h:'#FF0000'},{n:'Coral',h:'#FF7043'},
-  {n:'Bright red',h:'#D32F2F'},{n:'Scarlet',h:'#FF2400'},{n:'Peach red',h:'#FFAB76'},
-  {n:'Watermelon',h:'#FC6C85'},{n:'Hot red',h:'#FF1744'},{n:'Magenta red',h:'#C2185B'},
-  {n:'Crimson',h:'#DC143C'},{n:'Brick',h:'#9C4221'},{n:'Plum red',h:'#8E3A59'},
-  {n:'Dark red',h:'#8B0000'},{n:'Maroon',h:'#800000'},{n:'Rose red',h:'#C21E56'},
-  {n:'Ruby',h:'#9B111E'},{n:'Cherry red',h:'#990000'},{n:'Wine',h:'#722F37'},
-  {n:'Burgundy',h:'#7B1829'},{n:'Deep burgundy',h:'#560319'},{n:'Oxblood',h:'#4A0000'},
+  {g:'Reds',n:'Tomato',h:'#FF6347'},{n:'Coral red',h:'#FF4136'},{n:'Red',h:'#FF0000'},
+  {n:'Bright red',h:'#D32F2F'},{n:'Scarlet',h:'#FF2400'},{n:'Hot red',h:'#FF1744'},
+  {n:'Crimson',h:'#DC143C'},{n:'Brick',h:'#9C4221'},{n:'Rose red',h:'#C21E56'},
+  {n:'Dark red',h:'#8B0000'},{n:'Maroon',h:'#800000'},{n:'Ruby',h:'#9B111E'},
+  {n:'Cherry red',h:'#990000'},{n:'Wine',h:'#722F37'},{n:'Burgundy',h:'#7B1829'},
+  {n:'Deep burgundy',h:'#560319'},{n:'Oxblood',h:'#4A0000'},{n:'Carmine',h:'#960018'},
+  {n:'Blood red',h:'#660000'},{n:'Garnet',h:'#733635'},{n:'Claret',h:'#5C1A1A'},
+  {n:'Mahogany red',h:'#4E1B1B'},{n:'Deep claret',h:'#3B0A0A'},
   // ── Orange ──────────────────────────────────────────────────────
-  {g:'Orange',n:'Pale peach',h:'#FFDAC1'},{n:'Apricot',h:'#FBCEB1'},{n:'Melon',h:'#FEBAAD'},
-  {n:'Light apricot',h:'#FFD4A3'},{n:'Blush coral',h:'#F5B8A0'},
-  {n:'Dusty coral',h:'#E8917A'},{n:'Salmon',h:'#FA8072'},
-  {n:'Terracotta',h:'#E2725B'},{n:'Burnt sienna',h:'#E97451'},{n:'Coral',h:'#FF7043'},
-  {n:'Pumpkin',h:'#FF7518'},{n:'Marigold',h:'#EDA820'},{n:'Bronze',h:'#CD7F32'},
-  {n:'Copper',h:'#B87333'},{n:'Amber',h:'#FFA000'},{n:'Cinnamon',h:'#D2691E'},
-  {n:'Orange',h:'#F57C00'},{n:'Cognac',h:'#9A463D'},{n:'Tangerine',h:'#F28500'},
-  {n:'Hazelnut',h:'#9B6B3A'},{n:'Toffee',h:'#8B6343'},{n:'Brown',h:'#795548'},
-  {n:'Chestnut',h:'#954535'},{n:'Auburn',h:'#A52A2A'},{n:'Sienna',h:'#A0522D'},
-  {n:'Rust',h:'#B7410E'},{n:'Burnt orange',h:'#CC5500'},{n:'Mocha',h:'#6F4E37'},
+  {g:'Orange & Brown',n:'Dusty coral',h:'#E8917A'},{n:'Terracotta',h:'#E2725B'},{n:'Coral',h:'#FF7043'},
+  {n:'Pumpkin',h:'#FF7518'},{n:'Bronze',h:'#CD7F32'},{n:'Copper',h:'#B87333'},
+  {n:'Amber',h:'#FFA000'},{n:'Cinnamon',h:'#D2691E'},{n:'Orange',h:'#F57C00'},
+  {n:'Cognac',h:'#9A463D'},{n:'Burnt orange',h:'#CC5500'},{n:'Rust',h:'#B7410E'},
+  {n:'Paprika',h:'#8D1F0A'},{n:'Toffee',h:'#8B6343'},{n:'Brown',h:'#795548'},
+  {n:'Chestnut',h:'#954535'},{n:'Sienna',h:'#A0522D'},{n:'Mocha',h:'#6F4E37'},
   {n:'Mahogany',h:'#C04000'},{n:'Walnut',h:'#5C4033'},{n:'Russet',h:'#80461B'},
-  {n:'Paprika',h:'#8D1F0A'},{n:'Sepia',h:'#704214'},{n:'Chocolate',h:'#7B3F00'},
-  {n:'Espresso',h:'#3B1F14'},
+  {n:'Sepia',h:'#704214'},{n:'Chocolate',h:'#7B3F00'},{n:'Espresso',h:'#3B1F14'},
+  {n:'Dark brown',h:'#2E1503'},{n:'Muted terracotta',h:'#A0614E'},{n:'Clay',h:'#8C5A47'},
+  {n:'Brick brown',h:'#6B3A2A'},{n:'Dark rust',h:'#5C2000'},
   // ── Yellows ─────────────────────────────────────────────────────
-  {g:'Yellows',n:'Pale yellow',h:'#FFFFE0'},{n:'Cream yellow',h:'#FFFACD'},{n:'Butter yellow',h:'#FFFD74'},
-  {n:'Mustard',h:'#FFDB58'},{n:'Lemon',h:'#FFF44F'},{n:'Yellow',h:'#FFEB3B'},
-  {n:'Saffron',h:'#F4C430'},{n:'Honey',h:'#E8A020'},{n:'Golden yellow',h:'#FFC107'},
-  {n:'Gold',h:'#C9A72A'},{n:'Canary',h:'#FFEF00'},{n:'Sunshine',h:'#FFD300'},
+  {g:'Yellows',n:'Butter yellow',h:'#FFFD74'},{n:'Mustard',h:'#FFDB58'},{n:'Yellow',h:'#FFEB3B'},
+  {n:'Saffron',h:'#F4C430'},{n:'Honey',h:'#E8A020'},{n:'Gold',h:'#C9A72A'},
   {n:'Ochre',h:'#CC7722'},{n:'Dark mustard',h:'#D4A017'},{n:'Dark gold',h:'#B8860B'},
+  {n:'Muted yellow',h:'#B5A642'},{n:'Olive yellow',h:'#8B8000'},{n:'Antique gold',h:'#8B7536'},
+  {n:'Dark ochre',h:'#7A5C00'},{n:'Goldenrod',h:'#6B5B00'},
   // ── Greens ──────────────────────────────────────────────────────
-  {g:'Greens',n:'Honeydew',h:'#F0FFF0'},{n:'Light sage',h:'#C8DABC'},{n:'Mint',h:'#B2DFDB'},
-  {n:'Pale green',h:'#98FB98'},{n:'Seafoam',h:'#93E9BE'},{n:'Sage',h:'#8FAF8F'},
-  {n:'Pistachio',h:'#93C572'},{n:'Muted green',h:'#7A9A7A'},{n:'Eucalyptus',h:'#44D7A8'},
-  {n:'Emerald',h:'#50C878'},{n:'Lime green',h:'#32CD32'},{n:'Chartreuse',h:'#7FFF00'},
-  {n:'Green',h:'#388E3C'},{n:'Fern',h:'#4F7942'},{n:'Kelly green',h:'#4CBB17'},
-  {n:'Moss',h:'#8A9A5B'},{n:'Khaki green',h:'#6B7C3A'},{n:'Olive',h:'#827717'},
-  {n:'Jade',h:'#00A86B'},{n:'Forest green',h:'#228B22'},{n:'Hunter green',h:'#355E3B'},
-  {n:'Army green',h:'#3B4A2F'},{n:'Dark olive',h:'#4B5320'},{n:'Pine green',h:'#01796F'},
-  {n:'Bottle green',h:'#006A4E'},{n:'Dark green',h:'#1B5E20'},
+  {g:'Greens',n:'Mint',h:'#B2DFDB'},{n:'Light sage',h:'#C8DABC'},{n:'Sage',h:'#8FAF8F'},
+  {n:'Pistachio',h:'#93C572'},{n:'Muted green',h:'#7A9A7A'},{n:'Emerald',h:'#50C878'},
+  {n:'Green',h:'#388E3C'},{n:'Fern',h:'#4F7942'},{n:'Moss',h:'#8A9A5B'},
+  {n:'Khaki green',h:'#6B7C3A'},{n:'Olive',h:'#827717'},{n:'Jade',h:'#00A86B'},
+  {n:'Forest green',h:'#228B22'},{n:'Hunter green',h:'#355E3B'},{n:'Army green',h:'#3B4A2F'},
+  {n:'Dark olive',h:'#4B5320'},{n:'Pine green',h:'#01796F'},{n:'Bottle green',h:'#006A4E'},
+  {n:'Dark green',h:'#1B5E20'},{n:'Racing green',h:'#003000'},{n:'British racing',h:'#004225'},
+  {n:'Deep forest',h:'#0A2E0A'},{n:'Evergreen',h:'#05320A'},{n:'Spruce',h:'#0A2518'},
+  {n:'Swamp green',h:'#2C3A1E'},{n:'Fir',h:'#1A2E1A'},{n:'Dark moss',h:'#3B3D1F'},
   // ── Blue ────────────────────────────────────────────────────────
-  {g:'Blue',n:'Ice blue',h:'#D6EAF8'},{n:'Periwinkle',h:'#CCCCFF'},{n:'Pale blue',h:'#C5D8F5'},
-  {n:'Powder blue',h:'#B0E0E6'},{n:'Light blue',h:'#90CAF9'},{n:'Baby blue',h:'#89CFF0'},
-  {n:'Sky blue',h:'#87CEEB'},{n:'Electric blue',h:'#7DF9FF'},{n:'Light teal',h:'#80CBC4'},
+  {g:'Blue',n:'Periwinkle',h:'#CCCCFF'},{n:'Light blue',h:'#90CAF9'},{n:'Sky blue',h:'#87CEEB'},
   {n:'Cornflower blue',h:'#6495ED'},{n:'Dusty blue',h:'#7B9BB8'},{n:'Blue grey',h:'#6B7FA8'},
-  {n:'Royal blue',h:'#4169E1'},{n:'Turquoise',h:'#40E0D0'},{n:'Cadet blue',h:'#5F9EA0'},
+  {n:'Royal blue',h:'#4169E1'},{n:'Cadet blue',h:'#5F9EA0'},{n:'Light teal',h:'#80CBC4'},
   {n:'Blue',h:'#2196F3'},{n:'Steel blue',h:'#4682B4'},{n:'Storm blue',h:'#4A6FA5'},
-  {n:'Indigo',h:'#3F51B5'},{n:'Aqua',h:'#00FFFF'},{n:'Azure',h:'#007FFF'},
-  {n:'Bright blue',h:'#0096FF'},{n:'Denim',h:'#1560BD'},{n:'Cyan',h:'#00BCD4'},
-  {n:'Sapphire',h:'#0F52BA'},{n:'Cobalt blue',h:'#0047AB'},{n:'Dark indigo',h:'#1A237E'},
-  {n:'Cerulean',h:'#007BA7'},{n:'Midnight blue',h:'#191970'},{n:'Navy',h:'#1B3A6B'},
-  {n:'Peacock blue',h:'#005F8E'},{n:'Teal',h:'#00796B'},{n:'Aegean blue',h:'#005778'},
-  {n:'Ocean teal',h:'#007070'},{n:'Petrol',h:'#005F6A'},{n:'Deep navy',h:'#060D3F'},
-  {n:'Dark teal',h:'#004D40'},{n:'Dark navy',h:'#0A1931'},
+  {n:'Indigo',h:'#3F51B5'},{n:'Denim',h:'#1560BD'},{n:'Sapphire',h:'#0F52BA'},
+  {n:'Cobalt blue',h:'#0047AB'},{n:'Dark indigo',h:'#1A237E'},{n:'Cerulean',h:'#007BA7'},
+  {n:'Midnight blue',h:'#191970'},{n:'Navy',h:'#1B3A6B'},{n:'Peacock blue',h:'#005F8E'},
+  {n:'Teal',h:'#00796B'},{n:'Aegean blue',h:'#005778'},{n:'Ocean teal',h:'#007070'},
+  {n:'Petrol',h:'#005F6A'},{n:'Deep navy',h:'#060D3F'},{n:'Dark teal',h:'#004D40'},
+  {n:'Dark navy',h:'#0A1931'},{n:'Muted blue',h:'#4A6274'},{n:'Slate blue',h:'#3D5A6C'},
+  {n:'Ink blue',h:'#1C2F4A'},{n:'Deep denim',h:'#1A2D45'},{n:'Abyss',h:'#0D1B2A'},
+  {n:'Muted teal',h:'#2E5050'},{n:'Dark petrol',h:'#1A3535'},
   // ── Purple ──────────────────────────────────────────────────────
-  {g:'Purple',n:'Pale lavender',h:'#DDD5F3'},{n:'Soft lilac',h:'#E8D5E8'},{n:'Thistle',h:'#D8BFD8'},
-  {n:'Lavender',h:'#B39DDB'},{n:'Pink lilac',h:'#DDA0DD'},{n:'Wisteria',h:'#C9A0DC'},
-  {n:'Heather',h:'#B69FC1'},{n:'Soft purple',h:'#C090D0'},{n:'Lilac',h:'#C8A2C8'},
-  {n:'Orchid',h:'#DA70D6'},{n:'Violet',h:'#8F00FF'},{n:'Amethyst',h:'#9966CC'},
-  {n:'Medium purple',h:'#9370DB'},{n:'Purple',h:'#7B1FA2'},{n:'Plum',h:'#8E4585'},
-  {n:'Mauve purple',h:'#7B5B8A'},{n:'Grape',h:'#6F2DA8'},{n:'Byzantium',h:'#702963'},
-  {n:'Dark plum',h:'#5D2B6B'},{n:'Berry',h:'#8B0057'},{n:'Dark purple',h:'#4A0072'},
-  {n:'Eggplant',h:'#380024'},{n:'Blackberry',h:'#4D0135'},
+  {g:'Purple',n:'Lavender',h:'#B39DDB'},{n:'Wisteria',h:'#C9A0DC'},{n:'Lilac',h:'#C8A2C8'},
+  {n:'Violet',h:'#8F00FF'},{n:'Amethyst',h:'#9966CC'},{n:'Purple',h:'#7B1FA2'},
+  {n:'Plum',h:'#8E4585'},{n:'Grape',h:'#6F2DA8'},{n:'Byzantium',h:'#702963'},
+  {n:'Dark plum',h:'#5D2B6B'},{n:'Dark purple',h:'#4A0072'},{n:'Eggplant',h:'#380024'},
+  {n:'Blackberry',h:'#4D0135'},{n:'Muted violet',h:'#5C4A7A'},{n:'Dusty purple',h:'#6B5B7A'},
+  {n:'Smoky plum',h:'#4A2D4A'},{n:'Deep grape',h:'#2E0A3A'},{n:'Aubergine',h:'#280028'},
   // ── Pinks ───────────────────────────────────────────────────────
-  {g:'Pinks',n:'Ballet pink',h:'#FADADD'},{n:'Baby pink',h:'#FFB6C1'},{n:'Powder pink',h:'#FFD1DC'},
-  {n:'Blush pink',h:'#F4A6B0'},{n:'Soft pink',h:'#FFC0CB'},{n:'Flamingo',h:'#FC8EAC'},
-  {n:'Cotton candy',h:'#FFBCD9'},{n:'Bubblegum',h:'#FFA6C9'},{n:'Watermelon pink',h:'#FC6C85'},
-  {n:'Strawberry',h:'#FC5A8D'},{n:'Hot pink',h:'#FF69B4'},{n:'Pink',h:'#E91E63'},
-  {n:'Cerise',h:'#DE3163'},{n:'Deep fuchsia',h:'#C71585'},{n:'Dusty rose',h:'#DCAE96'},
-  {n:'Rose gold',h:'#B76E79'},{n:'Mauve',h:'#B07898'},
-  {n:'Cerise dark',h:'#DE3163'},{n:'Raspberry',h:'#E30B5D'},{n:'Deep rose',h:'#C2185B'},
-  {n:'Magenta',h:'#FF0090'},{n:'Fuchsia',h:'#FF00FF'},{n:'Candy pink',h:'#FF87AB'},
-  {n:'Antique pink',h:'#C08080'},
+  {g:'Pinks',n:'Ballet pink',h:'#FADADD'},{n:'Blush pink',h:'#F4A6B0'},{n:'Soft pink',h:'#FFC0CB'},
+  {n:'Hot pink',h:'#FF69B4'},{n:'Pink',h:'#E91E63'},{n:'Dusty rose',h:'#DCAE96'},
+  {n:'Rose gold',h:'#B76E79'},{n:'Mauve',h:'#B07898'},{n:'Raspberry',h:'#E30B5D'},
+  {n:'Deep rose',h:'#C2185B'},{n:'Fuchsia',h:'#FF00FF'},{n:'Muted rose',h:'#8C4A5A'},
+  {n:'Antique rose',h:'#7A3D4A'},{n:'Dark mauve',h:'#6B3B50'},{n:'Deep fuchsia',h:'#6B0040'},
   // ── Specials & Prints ───────────────────────────────────────────
   {g:'Specials & Prints',n:'Multicolor',h:'linear-gradient(135deg,#f00,#ff0,#0f0,#00f)'},{n:'Tie-dye',h:'linear-gradient(135deg,#f00,#ff69b4,#00f,#0f0)'},{n:'Iridescent',h:'linear-gradient(135deg,#ff69b4,#87ceeb,#98fb98,#ffd700,#ff69b4)'},
   {n:'Holographic',h:'linear-gradient(135deg,#ff0080,#00ffff,#ff0080,#ffff00,#00ffff)'},{n:'Floral print',h:'linear-gradient(135deg,#ffb6c1,#90ee90,#87ceeb,#fffacd)'},{n:'Animal print',h:'repeating-linear-gradient(45deg,#8B4513 0,#8B4513 4px,#D2B48C 4px,#D2B48C 10px)'},
@@ -673,7 +664,15 @@ function openAddItem(id=null){
       </div>
       <div class="fr"><label>Care instructions</label><input class="inp" id="f-care" placeholder="30° machine wash" value="${item?.care||''}"></div>
       <div class="fr"><label>Notes <span style="font-weight:400;color:var(--text3)">(sizing, where bought, alterations...)</span></label><textarea class="txa" id="f-notes" placeholder="e.g. Runs small, size up. Bought from ASOS sale.">${item?.notes||''}</textarea></div>
-      <div class="fr"><label>Color</label><div class="cr" id="cpick" style="align-items:flex-start"></div></div>
+      <div class="fr"><label>Color</label>
+        <div style="display:flex;flex-direction:column;gap:6px;width:100%">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div id="cpick-preview" style="width:28px;height:28px;border-radius:6px;border:1.5px solid var(--border2);flex-shrink:0;background:#e0e0e0"></div>
+            <span id="cpick-label" style="font-size:13px;color:var(--text2)">None selected</span>
+          </div>
+          <div class="cr" id="cpick" style="align-items:flex-start;max-height:320px;overflow-y:auto;padding:4px 2px"></div>
+        </div>
+      </div>
       <div class="fr"><label>Tags</label>
         <div style="display:flex;flex-direction:column;gap:6px">
           <!-- Current tags -->
@@ -713,12 +712,25 @@ function openAddItem(id=null){
 }
 
 function bCP(sel){
-  gi('cpick').innerHTML=COLORS.map(c=>{
-    const dot=`<div class="cd ${sel===c.n?'on':''}" title="${c.n}" style="background:${c.h}" onclick="selC('${c.n}',this)"></div>`;
-    return c.g?`<div style="width:100%;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.09em;margin:8px 0 4px;flex-basis:100%">${c.g}</div>${dot}`:dot;
-  }).join('');
+  const filtered=COLORS;
+  let html='',lastG='';
+  filtered.forEach(c=>{
+    if(c.g&&c.g!==lastG){
+      html+=`<div style="width:100%;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.09em;margin:8px 0 2px;flex-basis:100%">${c.g}</div>`;
+      lastG=c.g;
+    }
+    html+=`<div class="cd ${sel===c.n?'on':''}" title="${c.n}" onclick="selC('${c.n}',this)"><div class="cd-swatch" style="background:${c.h}"></div><span class="cd-name">${c.n}</span></div>`;
+  });
+  gi('cpick').innerHTML=html;
+  _upCPrev(sel);
 }
-function selC(n,dot){document.querySelectorAll('.cd').forEach(d=>d.classList.remove('on'));dot.classList.add('on');}
+function _upCPrev(n){
+  const prev=gi('cpick-preview');const lbl=gi('cpick-label');
+  if(!prev||!lbl)return;
+  if(n){prev.style.background=hx(n);lbl.textContent=n;lbl.style.color='var(--text)';}
+  else{prev.style.background='#e0e0e0';lbl.textContent='None selected';lbl.style.color='var(--text3)';}
+}
+function selC(n,dot){document.querySelectorAll('.cd').forEach(d=>d.classList.remove('on'));dot.classList.add('on');_upCPrev(n);}
 function gC(){const d=document.querySelector('.cd.on');return d?d.title:null;}
 
 async function prevIP(inp){
